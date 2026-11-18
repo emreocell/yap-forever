@@ -56,6 +56,8 @@ class Plan:
     stalled: dict[int, int] = field(default_factory=dict)
     stall_reasons: dict[int, str] = field(default_factory=dict)
     events: list[str] = field(default_factory=list)
+    ranks: list[tuple[int, int, int, float]] = field(default_factory=list)  # (profession, skill, new cap, fee)
+    learn_log: list[tuple[int, int, int, str]] = field(default_factory=list)  # (profession, skill, spell, how)
     final_skill: dict[int, int] = field(default_factory=dict)
     learned: list[int] = field(default_factory=list)
     crafted: dict[int, float] = field(default_factory=dict)  # intermediates crafted for reagents
@@ -270,6 +272,7 @@ def plan(gd, valuer, stock, favor, cap: int = 225, quests: dict | None = None,
         learn_cost, favor_cost, scroll_kind, _reqs = lo
         learned.add(r.spell_id)
         p.learned.append(r.spell_id)
+        p.learn_log.append((r.skill_line, s, r.spell_id, scroll_kind or r.source))
         if r.source == "starter":
             return Cost()
         favor_left -= favor_cost
@@ -300,6 +303,7 @@ def plan(gd, valuer, stock, favor, cap: int = 225, quests: dict | None = None,
         p.fees += nxt.fee
         spent += Cost(nxt.fee, nxt.fee)
         rank_cap[prof] = nxt.cap
+        p.ranks.append((prof, s, nxt.cap, nxt.fee))
         p.events.append(f"{name} {s}: train rank up to {nxt.cap} ({money(nxt.fee)})")
 
     def craft_once_step(prof, spell):
@@ -353,6 +357,7 @@ def plan(gd, valuer, stock, favor, cap: int = 225, quests: dict | None = None,
                 p.fees += nxt.fee
                 spent += Cost(nxt.fee, nxt.fee)
                 rank_cap[prof] = nxt.cap
+                p.ranks.append((prof, s, nxt.cap, nxt.fee))
                 p.events.append(f"{name} {s}: train rank up to {nxt.cap} ({money(nxt.fee)})")
             continue
 

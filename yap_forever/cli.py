@@ -132,7 +132,7 @@ def cmd_prices(paths: Paths) -> int:
                         region=prof.region)
 
 
-def cmd_plan(paths: Paths, character: str) -> int:
+def cmd_plan(paths: Paths, character: str, profs: list[str] | None = None) -> int:
     try:
         prof = profile.load_profile(paths.profile)
     except (FileNotFoundError, ValueError) as e:
@@ -160,16 +160,33 @@ def cmd_plan(paths: Paths, character: str) -> int:
     if not stock.exists():
         print(f"no stock file for {character}: create {stock} (see the skill's setup guide)")
         return 1
+    from yap_forever import config
+    try:
+        goals = dict(config.parse_prof_arg(x) for x in profs or []) or config.load_stock(stock).goals
+    except ValueError as e:
+        print(e)
+        return 1
+    if not goals:
+        print("name the professions to plan: "
+              + command_hint(f"plan --character {character!r} --prof blacksmithing:225 [--prof enchanting:225]")
+              + " (a skill 1-300 or a recipe name per profession), or save them under [goals] in " + str(stock))
+        return 1
     import urllib.error
 
     from yap_forever import plan  # heavy imports only when planning
     try:
-        v, guide, full = plan.write_reports(paths, stock, prof.characters[character].favor_standing)
+        table, files = plan.write_reports(paths, stock, prof.characters[character].favor_standing, goals)
     except (urllib.error.URLError, TimeoutError) as e:
         print(f"could not download game data ({getattr(e, 'reason', e)}): check your network or VPN, "
               f"then run {command_hint('plan --character ' + character)} again")
         return 1
-    print(f"{v}. Guide: {guide}  Full report: {full}")
+    except ValueError as e:  # a recipe goal the data doesn't know or can't learn
+        print(e)
+        return 1
+    print(table)
+    print()
+    for key, path in files.items():
+        print(f"{key}: {path}")
     return 0
 
 
@@ -201,6 +218,8 @@ def main(argv: list[str], paths: Paths | None = None) -> int:
     sub.add_parser("prices", help="download your auction house's prices")
     pl = sub.add_parser("plan", help="plan a character's professions")
     pl.add_argument("--character", required=True)
+    pl.add_argument("--prof", action="append", default=[], metavar="NAME:TARGET",
+                    help="a profession and its target: a skill 1-300 or a recipe (once or twice)")
     m = sub.add_parser("migrate", help="move a pre-yap-forever planner folder into your home folder")
     m.add_argument("--from-user", type=Path, required=True, help="folder with stock.toml and bags files")
     m.add_argument("--from-data", type=Path, required=True, help="old data folder (house, prices, game data)")
@@ -221,4 +240,4 @@ def main(argv: list[str], paths: Paths | None = None) -> int:
         return cmd_prices(paths)
     if args.command == "migrate":
         return cmd_migrate(paths, args)
-    return cmd_plan(paths, args.character)
+    return cmd_plan(paths, args.character, args.prof)
