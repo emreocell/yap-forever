@@ -35,6 +35,50 @@ class Stock:
     mining_goal: int = 0  # Mining skill you'll reach while farming; 0 = current
     quest_item_sales: int | None = None  # quest items you expect to sell on the AH; None = no limit
     skills: dict[int, int] = field(default_factory=dict)  # skill line -> current skill; absent = 1
+    goals: dict[int, "Goal"] = field(default_factory=dict)  # skill line -> what to plan it to
+    bag_slots: int | None = None  # free bag slots while crafting; None = mailbox trips not planned
+
+
+MAX_SKILL = 300
+
+
+@dataclass(frozen=True)
+class Goal:
+    """Where to plan a profession to: a skill, or one recipe (name or spell ID) to craft once."""
+    skill: int | None = None
+    recipe: str | None = None
+
+
+def parse_goal(value: int | str) -> Goal:
+    """A number 1-300 is a skill; a larger number is a recipe's spell ID; other text is a recipe name."""
+    text = str(value).strip()
+    if text.lstrip("-").isdigit():
+        n = int(text)
+        if n > MAX_SKILL:
+            return Goal(recipe=text)
+        if n < 1:
+            raise ValueError(f"target skill must be 1-{MAX_SKILL}, not {n}")
+        return Goal(skill=n)
+    if not text:
+        raise ValueError("empty target: give a skill (1-300) or a recipe")
+    return Goal(recipe=text)
+
+
+def _profession_id(name: str) -> int:
+    key = str(name).strip().lower()
+    if key.isdigit():
+        return int(key)
+    if key in PROFESSION_IDS:
+        return PROFESSION_IDS[key]
+    raise ValueError(f"unknown profession {name!r}: use one of {', '.join(sorted(PROFESSION_IDS))}")
+
+
+def parse_prof_arg(text: str) -> tuple[int, Goal]:
+    """'tailoring:225' or 'enchanting:Enchant Bracer - Minor Health' -> (skill line, goal)."""
+    name, sep, target = text.partition(":")
+    if not sep:
+        raise ValueError(f"use NAME:TARGET, e.g. tailoring:225 (got {text!r})")
+    return _profession_id(name), parse_goal(target)
 
 
 def _skills(table: dict) -> dict[int, int]:
@@ -69,4 +113,6 @@ def load_stock(path: Path) -> Stock:
         mining_goal=int(d.get("mining_goal", d.get("mining", 0))),
         quest_item_sales=int(d["quest_item_sales"]) if "quest_item_sales" in d else None,
         skills=_skills(d.get("skills", {})),
+        goals={_profession_id(k): parse_goal(v) for k, v in d.get("goals", {}).items()},
+        bag_slots=int(d["bag_slots"]) if "bag_slots" in d else None,
     )

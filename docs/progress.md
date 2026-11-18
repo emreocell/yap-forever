@@ -34,3 +34,4 @@ One line per finished task. Plans are private to the owner; tasks are named by p
 | 2026-11-18 | 1.28 | Corrects 1.27: with 0 required approvals the code-owner rule does not block the owner's PRs, so no `--admin`; CODEOWNERS routes outside PRs to the owner | #28 |
 | 2026-11-18 | 1.29 | Report's "Order A" text matches the planner since #22 and #24 (outside contribution) | #47 |
 | 2026-11-18 | 2.1 | Game data loads the recipes and starter recipes of the professions asked for (any of the six crafts), and each item's stack size; profession names cover all six | #51 |
+| 2026-11-18 | 2.2 | Per-profession goals: `[goals]` in `stock.toml` (a skill 1-300, or a recipe by name or spell ID), `bag_slots`; `migrate` adds Blacksmithing and Enchanting goals to older stock files | #52 |

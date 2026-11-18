@@ -39,6 +39,19 @@ class MigrateTests(unittest.TestCase):
         self.assertEqual(set(prof.characters), {"Ana", "Bo"})
         self.assertEqual(prof.faction, "alliance")
 
+    def test_migrate_adds_goals(self):
+        from yap_forever.config import Goal, load_stock
+        (self.user / "stock.toml").write_text("level = 47\ntarget = 200\n[items]\n", encoding="utf-8")
+        self.run_migrate()
+        s = load_stock(self.dest.character("Ana") / "stock.toml")
+        self.assertEqual(s.goals, {164: Goal(skill=200), 333: Goal(skill=200)})
+
+    def test_migrate_keeps_existing_goals(self):
+        text = "level = 47\n[items]\n\n[goals]\ntailoring = 150\n"
+        (self.user / "stock.toml").write_text(text, encoding="utf-8")
+        self.run_migrate()
+        self.assertEqual((self.dest.character("Ana") / "stock.toml").read_text(encoding="utf-8"), text)
+
     def test_migrate_copies_and_keeps_existing_profile(self):
         self.dest.root.mkdir(parents=True)
         self.dest.profile.write_text('region = "us"\nfaction = "horde"\n', encoding="utf-8")
