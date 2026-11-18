@@ -143,8 +143,15 @@ def cmd_plan(paths: Paths, character: str) -> int:
     if not stock.exists():
         print(f"no stock file for {character}: create {stock} (see the skill's setup guide)")
         return 1
+    import urllib.error
+
     from yap_forever import plan  # heavy imports only when planning
-    v, guide, full = plan.write_reports(paths, stock, prof.characters[character].favor_standing)
+    try:
+        v, guide, full = plan.write_reports(paths, stock, prof.characters[character].favor_standing)
+    except (urllib.error.URLError, TimeoutError) as e:
+        print(f"could not download game data ({getattr(e, 'reason', e)}): check your network or VPN, "
+              f"then run {command_hint('plan --character ' + character)} again")
+        return 1
     print(f"{v}. Guide: {guide}  Full report: {full}")
     return 0
 

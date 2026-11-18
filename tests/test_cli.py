@@ -39,6 +39,17 @@ class CliTests(unittest.TestCase):
         unions = [n for n in ast.walk(tree) if isinstance(n, ast.BinOp) and isinstance(n.op, ast.BitOr)]
         self.assertTrue(lazy or not unions)
 
+    def test_init_prints_cyrillic_home_on_ansi_console(self):
+        # Windows pipes stdout in the ANSI code page; Claude Code reads it through a pipe.
+        import subprocess
+        import sys
+        home = Path(self._tmp.name) / "Мой дом"
+        env = dict(os.environ, YAP_FOREVER_HOME=str(home), PYTHONIOENCODING="cp1252")
+        r = subprocess.run([sys.executable, "-m", "yap_forever", "init"], env=env,
+                           cwd=Path(cli.__file__).parent.parent, capture_output=True)
+        self.assertEqual(r.returncode, 0, r.stderr.decode("utf-8", "replace")[-300:])
+        self.assertTrue((home / "profile.toml").exists())
+
     def test_command_hint_windows(self):
         self.assertEqual(cli.command_hint("check", "nt"), "py -3 -m yap_forever check")
         self.assertEqual(cli.command_hint("check", "posix"), "python3 -m yap_forever check")
@@ -77,6 +88,19 @@ class CliTests(unittest.TestCase):
         code, out = run(["plan", "--character", "Main"], self.paths)
         self.assertEqual(code, 1)
         self.assertIn(cli.command_hint("prices"), out)
+
+    def test_plan_offline_game_data_names_network(self):
+        import urllib.error
+        from unittest import mock
+        run(["init"], self.paths)
+        self.paths.prices.write_text('{"snapshot_time": "t", "listings": {}}', encoding="utf-8")
+        stock = self.paths.character("Main") / "stock.toml"
+        stock.parent.mkdir(parents=True)
+        stock.write_text("level = 20\n[items]\n", encoding="utf-8")
+        with mock.patch("urllib.request.urlopen", side_effect=urllib.error.URLError("offline")):
+            code, out = run(["plan", "--character", "Main"], self.paths)
+        self.assertEqual(code, 1)
+        self.assertIn("network", out)
 
     def test_plan_unknown_character_lists_known(self):
         run(["init"], self.paths)

@@ -75,6 +75,8 @@ class Client:
             if e.code in (400, 401, 403):
                 raise AuthError(AUTH_MESSAGE) from None
             raise ApiError(e.code, "/token") from None
+        except (urllib.error.URLError, TimeoutError, OSError) as e:
+            raise ApiError(0, "/token", str(getattr(e, "reason", e))) from None
         token = d["access_token"]
         self.token_cache.parent.mkdir(parents=True, exist_ok=True)
         fd = os.open(self.token_cache, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)

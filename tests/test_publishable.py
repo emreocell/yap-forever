@@ -84,7 +84,10 @@ class PublishableTests(unittest.TestCase):
             for label, rx in PRIVATE:
                 if rx.search(text):
                     hits.append(f"{p.relative_to(ROOT)}: {label}")
-            hits += [f"{p.relative_to(ROOT)}: denylisted text" for d in deny if d in text]
+            for d in deny:  # plain text, or "re:<pattern>" for things like a bare number
+                found = re.search(d[3:], text) if d.startswith("re:") else d in text
+                if found:
+                    hits.append(f"{p.relative_to(ROOT)}: denylisted text")
         self.assertEqual(hits, [])
 
 
