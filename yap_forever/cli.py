@@ -96,10 +96,13 @@ def cmd_check(paths: Paths, offline: bool) -> int:
             line("API token", False, str(e))
     try:
         line("house", True, str(profile.load_house(paths.house)))
-    except FileNotFoundError as e:
+    except (FileNotFoundError, ValueError) as e:
         line("house", False, str(e))
     if paths.prices.exists():
-        line("prices", True, prices.Market.load(paths.prices).snapshot_time or "saved")
+        try:
+            line("prices", True, prices.Market.load(paths.prices).snapshot_time or "saved")
+        except ValueError as e:
+            line("prices", False, str(e))
     else:
         line("prices", False, f"run {command_hint('prices')}")
     print("\n".join(lines))
@@ -141,11 +144,14 @@ def cmd_plan(paths: Paths, character: str) -> int:
     if not paths.prices.exists():
         print(f"no prices yet: run {command_hint('prices')}")
         return 1
-    saved_for = prices.Market.load(paths.prices).house
     try:
+        saved_for = prices.Market.load(paths.prices).house
         house = profile.load_house(paths.house)
     except FileNotFoundError:
         house = None
+    except ValueError as e:
+        print(e)
+        return 1
     if saved_for is not None and house is not None and saved_for != house:
         print(f"your prices are for house {saved_for}, but your auction house is {house}: "
               f"run {command_hint('prices')}")

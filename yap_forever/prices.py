@@ -66,11 +66,15 @@ class Market:
     @classmethod
     def load(cls, path: Path | None = None) -> "Market":
         path = Path(path) if path is not None else settings.paths().prices
-        d = json.loads(path.read_text(encoding="utf-8"))
-        m = cls({int(i): [tuple(x) for x in v] for i, v in d["listings"].items()},
-                d.get("snapshot_time", ""))
-        m.house, m.region, m.ruleset = d.get("house"), d.get("region", ""), d.get("ruleset")
-        m.commodities_time = d.get("commodities_time", "")
+        try:
+            d = json.loads(path.read_text(encoding="utf-8"))
+            m = cls({int(i): [tuple(x) for x in v] for i, v in d["listings"].items()},
+                    d.get("snapshot_time", ""))
+            m.house, m.region, m.ruleset = d.get("house"), d.get("region", ""), d.get("ruleset")
+            m.commodities_time = d.get("commodities_time", "")
+        except (ValueError, KeyError, TypeError, AttributeError) as e:
+            raise ValueError(f"{path} is damaged ({type(e).__name__}): "
+                             f"run {settings.command_hint('prices')}") from None
         return m
 
 
@@ -80,7 +84,10 @@ def fetch(client, house: int, ruleset: int, prices_path: Path, log_path: Path, r
     Saved snapshot times are only trusted for the same house, region and ruleset; a different house
     always downloads in full. Auctions and commodities are separate snapshots and are checked apart.
     """
-    old = Market.load(prices_path) if prices_path.exists() else None
+    try:
+        old = Market.load(prices_path) if prices_path.exists() else None
+    except ValueError:  # damaged: download in full and replace it
+        old = None
     same = old is not None and (old.house, old.region, old.ruleset) == (house, region, ruleset)
     since = (old.snapshot_time or None) if same else None
     comm_since = (old.commodities_time or None) if same else None
