@@ -3,6 +3,7 @@
 Usage: python3 -m yap_forever.gamedata [--fetch] [--checks]
 """
 import csv
+import os
 import sys
 import urllib.request
 from dataclasses import dataclass, field
@@ -94,8 +95,13 @@ def fetch_all(force: bool = False, dest: Path | None = None) -> None:
         if p.exists() and not force:
             continue
         req = urllib.request.Request(url, headers={"User-Agent": "yap-forever/0.1"})
-        with urllib.request.urlopen(req, timeout=120) as r:
-            p.write_bytes(r.read())
+        part = p.with_name(p.name + ".part")
+        try:
+            with urllib.request.urlopen(req, timeout=120) as r:
+                part.write_bytes(r.read())
+            os.replace(part, p)  # a cut-off download never takes the real name
+        finally:
+            part.unlink(missing_ok=True)
         print(f"downloaded {name}")
 
 
