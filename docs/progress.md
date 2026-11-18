@@ -19,5 +19,5 @@ One line per finished task. Plans are private to the owner; tasks are named by p
 | 2026-11-18 | 1.13 | 15% buffer on yellow and green steps in the guide and report, rounded up; guide and report counts agree (independent review, finding 3) | #13 |
 | 2026-11-18 | 1.14 | Prices record their house, region and ruleset; a refresh for another house downloads in full; commodities are checked apart from auctions; `plan` refuses prices from another house (independent review, finding 5) | #14 |
 | 2026-11-18 | 1.15 | Bars that would be mined come first from ore, coal and bars in the bank (smelted, component bars in turn); banked coal counts at its value (independent review, finding 1) | #15 |
-| 2026-11-18 | 1.17 | Quest-learned recipes are skipped while the character is below the quest level, with the reason in the report (independent review, finding 6) | #17 |
 | 2026-11-18 | 1.16 | Disenchanting follows Forever: no item-level gate up to item level 45, and each disenchant is a chance at an Enchanting skill-up (1/20/40/60, matching play); greens are kept for disenchanting while that still gives skill (independent review, finding 4) | #16 |
+| 2026-11-18 | 1.17 | Quest-learned recipes are skipped while the character is below the quest level, with the reason in the report (independent review, finding 6) | #17 |
