@@ -80,6 +80,17 @@ class GuideTests(unittest.TestCase):
         row = next(l for l in text.splitlines() if l.startswith("| Copper Bar"))
         self.assertEqual(row.split("|")[2].strip(), "59")
 
+    def test_bank_greens_disenchanted_first(self):
+        rs = [toy.recipe(1, "BS basic", BS, {toy.COPPER_BAR: 1}, (toy.STONE, 1)),
+              toy.recipe(2, "Ench dust", ENCH, {toy.DUST: 1})]
+        text = guide(rs, {**BARS, toy.DUST: [(300, 100000)]}, stock=toy.stock({toy.BELT: 30}), cap=40)
+        self.assertIn("*At 1: disenchant 30 Runed Copper Belt from your bank*", text)
+        line = next(l for l in text.splitlines() if "Disenchant greens" in l)
+        self.assertTrue(line.startswith("- **1–"), line)
+        self.assertIn("30 Runed Copper Belt", line)
+        row = next(l for l in text.splitlines() if l.startswith("| Runed Copper Belt"))
+        self.assertEqual([c.strip() for c in row.split("|")[2:5]], ["30", "30", "0"])
+
     def test_disenchants_not_more_than_greens(self):
         import re
         rs = [toy.recipe(1, "Belt", BS, {toy.COPPER_BAR: 1}, (toy.BELT, 1)),

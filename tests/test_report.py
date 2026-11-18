@@ -65,6 +65,19 @@ if __name__ == "__main__":
     unittest.main()
 
 
+class BankGreensReportTests(unittest.TestCase):
+    def test_bank_disenchants_in_route_table(self):
+        rs = [toy.recipe(1, "BS basic", 164, {toy.COPPER_BAR: 1}, (toy.STONE, 1)),
+              toy.recipe(2, "Ench dust", 333, {toy.DUST: 1})]
+        gd = toy.gamedata(rs)
+        st = toy.stock({toy.BELT: 30})
+        m = toy.market({toy.COPPER_BAR: [(100, 100000)], toy.DUST: [(300, 100000)]})
+        p = plan(gd, Valuer(m, gd, st), st, toy.NO_FAVOR, cap=40)
+        text = render(p, verdict(p, st), m, gd, st, toy.NO_FAVOR)
+        self.assertRegex(text, r"\| Enchanting \| 1→\d+ \| Disenchant greens \| \d+ \| 0s 0c \| 0s 0c \|")
+        self.assertIn("Enchanting 1: disenchant 30 Runed Copper Belt from your bank", text)
+
+
 class BufferTests(unittest.TestCase):
     def test_orange_run_in_one_profession_has_no_buffer(self):
         rs = [toy.recipe(1, "BS basic", 164, {toy.COPPER_BAR: 1}, (toy.STONE, 1)),

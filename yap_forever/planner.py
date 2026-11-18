@@ -163,7 +163,7 @@ def plan(gd, valuer, stock, favor, cap: int = 225, quests: dict | None = None,
             return None
         return min(opts, key=lambda o: o["cost"].economic + (o["peek"].score if "peek" in o else 0))
 
-    def release_held():
+    def release_held(where=""):
         released = False
         for item in list(held):
             gate = de_skill_needed(gd.items[item].item_level)
@@ -172,10 +172,28 @@ def plan(gd, valuer, stock, favor, cap: int = 225, quests: dict | None = None,
                 for mat, per in de_yield(gd.items[item]).items():
                     pools.made[mat] = pools.made.get(mat, 0) + n * per
                     p.de_materials[mat] = p.de_materials.get(mat, 0) + n * per
-                p.events.append(f"Enchanting {skill[ENCH]}: disenchant {n:.0f} {gd.name(item)}")
+                p.events.append(f"Enchanting {skill[ENCH]}: disenchant {n:.0f} {gd.name(item)}{where}")
                 de_skillups(n)
                 released = True
         return released
+
+    def disenchant_bank():
+        """Greens in the bank are disenchanted first, all at once: a green you can disenchant is not a
+        lost sale, and each one is a chance at an Enchanting skill-up below 60."""
+        if skill[ENCH] >= cap:
+            return
+        greens = {i: n for i, n in pools.stock.items() if n >= 1 and (info := gd.items.get(i))
+                  and de_yield(info) and de_skill_needed(info.item_level) <= cap}
+        if not greens:
+            return
+        for i, n in greens.items():
+            del pools.stock[i]
+            held[i] = held.get(i, 0) + n
+        first = len(p.steps)
+        release_held(" from your bank")
+        if len(p.steps) > first:  # show the greens on the first disenchant step and in the keep table
+            p.steps[first].materials = dict(greens)
+            p.steps[first].from_stock = dict(greens)
 
     def de_skillups(n):
         """Disenchanting n items gives Enchanting skill-ups at the expected rate."""
@@ -232,6 +250,7 @@ def plan(gd, valuer, stock, favor, cap: int = 225, quests: dict | None = None,
         p.events.append(f"{name} {s}: Learn {r.name} ({how}{price})")
         return learn_cost
 
+    disenchant_bank()
     while True:
         active = [x for x in (BS, ENCH) if x not in p.stalled and skill[x] < cap]
         if not active:
