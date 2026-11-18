@@ -15,6 +15,12 @@ from yap_forever.config import Credentials
 HOME_ENV = "YAP_FOREVER_HOME"
 
 
+def command_hint(args: str, os_name: str = os.name) -> str:
+    """How the player runs a command on their system, for next-step messages."""
+    python = "py -3" if os_name == "nt" else "python3"
+    return f"{python} -m yap_forever {args}"
+
+
 def home(env: Mapping[str, str] = os.environ) -> Path:
     value = env.get(HOME_ENV)
     return Path(value) if value else Path.home() / ".yap-forever"

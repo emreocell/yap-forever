@@ -5,6 +5,8 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 
+from yap_forever.settings import command_hint
+
 STANDINGS = ("Neutral", "Friendly", "Honored", "Revered", "Exalted")
 REGIONS = ("eu", "us", "kr", "tw")
 FACTIONS = ("alliance", "horde")
@@ -32,7 +34,7 @@ def _check(key: str, value, allowed) -> None:
 def load_profile(path: Path) -> Profile:
     path = Path(path)
     if not path.exists():
-        raise FileNotFoundError(f'no {path.name} yet: run "python3 -m yap_forever init" first')
+        raise FileNotFoundError(f'no {path.name} yet: run "{command_hint("init")}" first')
     d = tomllib.loads(path.read_text(encoding="utf-8"))
     region = d.get("region", "eu")
     faction = d.get("faction", "")
@@ -57,5 +59,6 @@ def save_house(path: Path, house: int, region: str, ruleset: int) -> None:
 def load_house(path: Path) -> int:
     path = Path(path)
     if not path.exists():
-        raise FileNotFoundError('no auction house yet: run "python3 -m yap_forever probe" first')
+        raise FileNotFoundError(
+            f'no auction house yet: post a marker listing in game, then run "{command_hint("probe --item ID --buyout COPPER")}"')
     return int(json.loads(path.read_text(encoding="utf-8"))["house"])

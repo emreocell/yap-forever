@@ -1,0 +1,78 @@
+import contextlib
+import io
+import os
+import tempfile
+import unittest
+from pathlib import Path
+
+from yap_forever import cli, settings
+from yap_forever.__main__ import python_too_old
+
+
+def run(argv, paths):
+    out = io.StringIO()
+    with contextlib.redirect_stdout(out):
+        code = cli.main(argv, paths)
+    return code, out.getvalue()
+
+
+class CliTests(unittest.TestCase):
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.paths = settings.paths(Path(self._tmp.name) / "home")
+
+    def tearDown(self):
+        self._tmp.cleanup()
+
+    def test_python_too_old_message(self):
+        self.assertEqual(python_too_old((3, 10)), "yap-forever needs Python 3.11 or newer; you have 3.10.")
+        self.assertIsNone(python_too_old((3, 11)))
+
+    def test_command_hint_windows(self):
+        self.assertEqual(cli.command_hint("check", "nt"), "py -3 -m yap_forever check")
+        self.assertEqual(cli.command_hint("check", "posix"), "python3 -m yap_forever check")
+
+    def test_init_creates_files_and_keeps_existing(self):
+        code, _ = run(["init"], self.paths)
+        self.assertEqual(code, 0)
+        for p in (self.paths.profile, self.paths.credentials, self.paths.cache, self.paths.reports):
+            self.assertTrue(p.exists(), p)
+        self.paths.profile.write_text('region = "us"\nfaction = "horde"\n', encoding="utf-8")
+        run(["init"], self.paths)
+        self.assertEqual(self.paths.profile.read_text(encoding="utf-8"), 'region = "us"\nfaction = "horde"\n')
+
+    @unittest.skipIf(os.name == "nt", "file modes are POSIX only")
+    def test_init_credentials_mode_600(self):
+        run(["init"], self.paths)
+        self.assertEqual(self.paths.credentials.stat().st_mode & 0o777, 0o600)
+
+    def test_check_reports_missing_credentials(self):
+        run(["init"], self.paths)
+        code, out = run(["check", "--offline"], self.paths)
+        self.assertEqual(code, 1)
+        line = next(l for l in out.splitlines() if l.startswith("credentials"))
+        self.assertIn("MISSING:", line)
+        self.assertIn(str(self.paths.credentials), line)
+        self.assertIn("develop.battle.net", line)
+
+    def test_prices_without_house_names_probe(self):
+        run(["init"], self.paths)
+        code, out = run(["prices"], self.paths)
+        self.assertEqual(code, 1)
+        self.assertIn(cli.command_hint("probe"), out)
+
+    def test_plan_without_prices_names_next_step(self):
+        run(["init"], self.paths)
+        code, out = run(["plan", "--character", "Main"], self.paths)
+        self.assertEqual(code, 1)
+        self.assertIn(cli.command_hint("prices"), out)
+
+    def test_plan_unknown_character_lists_known(self):
+        run(["init"], self.paths)
+        code, out = run(["plan", "--character", "Bob"], self.paths)
+        self.assertEqual(code, 1)
+        self.assertIn("Main", out)
+
+
+if __name__ == "__main__":
+    unittest.main()
