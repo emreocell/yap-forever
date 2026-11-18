@@ -63,7 +63,7 @@ def count(q: float) -> str:
 
 def gold(copper: float) -> str:
     c = int(round(copper))
-    if c >= 100000:
+    if c >= 1000000:  # from 100g, silver is under 1% of the amount
         return f"{c / 10000:,.0f}g"
     if c >= 10000:
         return f"{c / 10000:.1f}g"
