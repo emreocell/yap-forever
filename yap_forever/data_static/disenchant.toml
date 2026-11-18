@@ -1,0 +1,80 @@
+# Disenchanting uncommon (green) armor and weapons — Classic rules, used as estimates.
+# Each material: [item ID, name, average count, chance] (armor odds).
+# Weapons swap the dust and essence chances; the shard stays the same.
+# skill = Enchanting skill needed to disenchant items up to max_ilvl.
+
+[[band]]
+max_ilvl = 15
+skill = 1
+dust = [10940, "Strange Dust", 1.5, 0.80]
+essence = [10938, "Lesser Magic Essence", 1.5, 0.20]
+
+[[band]]
+max_ilvl = 20
+skill = 1
+dust = [10940, "Strange Dust", 2.5, 0.75]
+essence = [10939, "Greater Magic Essence", 1.5, 0.20]
+shard = [10978, "Small Glimmering Shard", 1, 0.05]
+
+[[band]]
+max_ilvl = 25
+skill = 25
+dust = [10940, "Strange Dust", 5, 0.75]
+essence = [10998, "Lesser Astral Essence", 1.5, 0.15]
+shard = [10978, "Small Glimmering Shard", 1, 0.10]
+
+[[band]]
+max_ilvl = 30
+skill = 50
+dust = [11083, "Soul Dust", 1.5, 0.75]
+essence = [11082, "Greater Astral Essence", 1.5, 0.20]
+shard = [11084, "Large Glimmering Shard", 1, 0.05]
+
+[[band]]
+max_ilvl = 35
+skill = 75
+dust = [11083, "Soul Dust", 3.5, 0.75]
+essence = [11134, "Lesser Mystic Essence", 1.5, 0.20]
+shard = [11138, "Small Glowing Shard", 1, 0.05]
+
+[[band]]
+max_ilvl = 40
+skill = 100
+dust = [11137, "Vision Dust", 1.5, 0.75]
+essence = [11135, "Greater Mystic Essence", 1.5, 0.20]
+shard = [11139, "Large Glowing Shard", 1, 0.05]
+
+[[band]]
+max_ilvl = 45
+skill = 125
+dust = [11137, "Vision Dust", 3.5, 0.75]
+essence = [11174, "Lesser Nether Essence", 1.5, 0.20]
+shard = [11177, "Small Radiant Shard", 1, 0.05]
+
+[[band]]
+max_ilvl = 50
+skill = 150
+dust = [11176, "Dream Dust", 1.5, 0.75]
+essence = [11175, "Greater Nether Essence", 1.5, 0.20]
+shard = [11178, "Large Radiant Shard", 1, 0.05]
+
+[[band]]
+max_ilvl = 55
+skill = 175
+dust = [11176, "Dream Dust", 3.5, 0.75]
+essence = [16202, "Lesser Eternal Essence", 1.5, 0.20]
+shard = [14343, "Small Brilliant Shard", 1, 0.05]
+
+[[band]]
+max_ilvl = 60
+skill = 200
+dust = [16204, "Illusion Dust", 1.5, 0.75]
+essence = [16203, "Greater Eternal Essence", 1.5, 0.20]
+shard = [14344, "Large Brilliant Shard", 1, 0.05]
+
+[[band]]
+max_ilvl = 65
+skill = 225
+dust = [16204, "Illusion Dust", 3.5, 0.75]
+essence = [16203, "Greater Eternal Essence", 2, 0.20]
+shard = [14344, "Large Brilliant Shard", 1, 0.05]

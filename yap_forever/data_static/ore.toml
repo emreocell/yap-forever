@@ -1,0 +1,29 @@
+# Ore and bars. Forever change: mithril at Mining 175 (Classic 175 to smelt, 175 to mine here).
+[ore]  # item = [name, mining skill]
+2770 = ["Copper Ore", 1]
+2771 = ["Tin Ore", 65]
+2775 = ["Silver Ore", 75]
+2772 = ["Iron Ore", 125]
+2776 = ["Gold Ore", 155]
+3858 = ["Mithril Ore", 175]
+7911 = ["Truesilver Ore", 230]  # Classic value; Forever unconfirmed
+10620 = ["Thorium Ore", 245]  # Classic value; Forever unconfirmed
+
+[bars]  # bar = [name, {ore/reagent: qty}, smelting skill, bars per smelt]
+2840 = ["Copper Bar", {2770 = 1}, 1, 1]
+3576 = ["Tin Bar", {2771 = 1}, 65, 1]
+2841 = ["Bronze Bar", {2840 = 1, 3576 = 1}, 65, 2]
+2842 = ["Silver Bar", {2775 = 1}, 75, 1]
+3575 = ["Iron Bar", {2772 = 1}, 125, 1]
+3577 = ["Gold Bar", {2776 = 1}, 155, 1]
+3859 = ["Steel Bar", {3575 = 1, 3857 = 1}, 165, 1]   # 3857 Coal, vendor
+3860 = ["Mithril Bar", {3858 = 1}, 175, 1]
+6037 = ["Truesilver Bar", {7911 = 1}, 230, 1]
+12359 = ["Thorium Bar", {10620 = 1}, 250, 1]
+
+[stone]  # item = [name, mining skill]; stones come from the same veins as the ore
+2835 = ["Rough Stone", 1]
+2836 = ["Coarse Stone", 65]
+2838 = ["Heavy Stone", 125]
+7912 = ["Solid Stone", 175]
+12365 = ["Dense Stone", 245]

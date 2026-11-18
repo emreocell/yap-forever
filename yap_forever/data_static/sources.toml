@@ -1,0 +1,41 @@
+# Where gathered materials come from, for the "keep while levelling" list.
+# Ore, bars and stones are read from ore.toml; dust, essence and shards from disenchant.toml.
+
+[mining]  # gems from mining nodes
+774 = "Malachite"
+818 = "Tigerseye"
+1210 = "Shadowgem"
+1206 = "Moss Agate"
+1705 = "Lesser Moonstone"
+1529 = "Jade"
+3864 = "Citrine"
+7909 = "Aquamarine"
+7910 = "Star Ruby"
+12361 = "Blue Sapphire"
+12799 = "Large Opal"
+12800 = "Azerothian Diamond"
+12364 = "Huge Emerald"
+7067 = "Elemental Earth"
+
+[skinning]
+2934 = "Ruined Leather Scraps"
+2318 = "Light Leather"
+783 = "Light Hide"
+2319 = "Medium Leather"
+4232 = "Medium Hide"
+4234 = "Heavy Leather"
+4235 = "Heavy Hide"
+4304 = "Thick Leather"
+8169 = "Thick Hide"
+8170 = "Rugged Leather"
+8171 = "Rugged Hide"
+7392 = "Green Whelp Scale"
+8154 = "Scorpid Scale"
+8167 = "Turtle Scale"
+
+[cloth]
+2589 = "Linen Cloth"
+2592 = "Wool Cloth"
+4306 = "Silk Cloth"
+4338 = "Mageweave Cloth"
+14047 = "Runecloth"

@@ -1,0 +1,6 @@
+{"auctions": [
+  {"id": 10, "item": {"id": 2770}, "quantity": 20, "unit_price": 777, "time_left": "LONG"},
+  {"id": 11, "item": {"id": 2840}, "quantity": 2, "unit_price": 10, "time_left": "LONG"},
+  {"id": 12, "item": {"id": 2840}, "quantity": 1, "unit_price": 50, "time_left": "LONG"},
+  {"id": 13, "item": {"id": 10940}, "quantity": 5, "unit_price": 300, "time_left": "LONG"}
+ ]}

@@ -1,0 +1,27 @@
+# Plans learned from a quest: [recipe spell] = items handed in, character level, quest giver.
+# Source: wow-professions.com Forever Blacksmithing guide (2026-11); 140 Thorium Bar for all four.
+# The guide assumes Forever lowered these quests from Blacksmithing 265 to 240 along with the recipes.
+
+[16647]
+name = "Imperial Plate Belt"
+items = {12359 = 20}  # Thorium Bar
+level = 50
+giver = "Derotain Mudsipper, Tanaris"
+
+[16649]
+name = "Imperial Plate Bracers"
+items = {12359 = 20}
+level = 50
+giver = "Derotain Mudsipper, Tanaris"
+
+[16657]
+name = "Imperial Plate Boots"
+items = {12359 = 40}
+level = 50
+giver = "Derotain Mudsipper, Tanaris"
+
+[16730]
+name = "Imperial Plate Leggings"
+items = {12359 = 60}
+level = 50
+giver = "Derotain Mudsipper, Tanaris"
