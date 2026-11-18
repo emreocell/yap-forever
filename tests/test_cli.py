@@ -98,7 +98,7 @@ class CliTests(unittest.TestCase):
         stock.parent.mkdir(parents=True)
         stock.write_text("level = 20\n[items]\n", encoding="utf-8")
         with mock.patch("urllib.request.urlopen", side_effect=urllib.error.URLError("offline")):
-            code, out = run(["plan", "--character", "Firstname Lastname"], self.paths)
+            code, out = run(["plan", "--character", "Firstname Lastname", "--prof", "blacksmithing:20"], self.paths)
         self.assertEqual(code, 1)
         self.assertIn("network", out)
 
@@ -115,6 +115,58 @@ class CliTests(unittest.TestCase):
         self.assertEqual(code, 1)
         self.assertIn(cli.command_hint("prices"), out)
         self.assertIn("house 10", out)
+
+    def ready_home(self):
+        import shutil
+        run(["init"], self.paths)
+        shutil.copytree(Path(__file__).parent / "fixtures" / "gamedata", self.paths.gamedata)
+        self.paths.prices.write_text('{"snapshot_time": "t", "listings": {"2835": [[20, 500]]}}', encoding="utf-8")
+        stock = self.paths.character("Firstname Lastname") / "stock.toml"
+        stock.parent.mkdir(parents=True)
+        stock.write_text("level = 20\n[items]\n", encoding="utf-8")
+        return stock
+
+    def test_plan_writes_both_routes(self):
+        self.ready_home()
+        code, out = run(["plan", "--character", "Firstname Lastname", "--prof", "blacksmithing:20"], self.paths)
+        self.assertEqual(code, 0, out)
+        self.assertIn("Least gold", out)
+        self.assertIn("Least total value", out)
+        for name in ("guide-gold", "guide-value", "plan-gold", "plan-value"):
+            self.assertTrue(list(self.paths.reports.glob(f"*-{name}.md")), name)
+
+    def test_plan_uses_saved_goals(self):
+        stock = self.ready_home()
+        stock.write_text("level = 20\n[items]\n\n[goals]\nblacksmithing = 20\n", encoding="utf-8")
+        code, out = run(["plan", "--character", "Firstname Lastname"], self.paths)
+        self.assertEqual(code, 0, out)
+
+    def test_plan_without_goals_names_flag(self):
+        self.ready_home()
+        code, out = run(["plan", "--character", "Firstname Lastname"], self.paths)
+        self.assertEqual(code, 1)
+        self.assertIn("--prof blacksmithing:225", out)
+
+    def test_plan_bad_recipe_target_names_it(self):
+        self.ready_home()
+        code, out = run(["plan", "--character", "Firstname Lastname", "--prof", "blacksmithing:Golden Nothing"],
+                        self.paths)
+        self.assertEqual(code, 1)
+        self.assertIn("no Blacksmithing recipe called 'Golden Nothing'", out)
+
+    def test_plan_bad_prof_flag(self):
+        self.ready_home()
+        code, out = run(["plan", "--character", "Firstname Lastname", "--prof", "cooking:150"], self.paths)
+        self.assertEqual(code, 1)
+        self.assertIn("unknown profession", out)
+
+    def test_plan_rejects_three_professions_or_a_repeat(self):
+        self.ready_home()
+        for flags in (["blacksmithing:20", "enchanting:20", "tailoring:20"], ["blacksmithing:20", "blacksmithing:30"]):
+            argv = ["plan", "--character", "Firstname Lastname"] + [x for f in flags for x in ("--prof", f)]
+            code, out = run(argv, self.paths)
+            self.assertEqual(code, 1, flags)
+            self.assertIn("one or two different professions", out)
 
     def test_plan_unknown_character_lists_known(self):
         run(["init"], self.paths)

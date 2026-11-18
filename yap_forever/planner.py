@@ -56,6 +56,8 @@ class Plan:
     stalled: dict[int, int] = field(default_factory=dict)
     stall_reasons: dict[int, str] = field(default_factory=dict)
     events: list[str] = field(default_factory=list)
+    ranks: list[tuple[int, int, int, float]] = field(default_factory=list)  # (profession, skill, new cap, fee)
+    learn_log: list[tuple[int, int, int, str]] = field(default_factory=list)  # (profession, skill, spell, how)
     final_skill: dict[int, int] = field(default_factory=dict)
     learned: list[int] = field(default_factory=list)
     crafted: dict[int, float] = field(default_factory=dict)  # intermediates crafted for reagents
@@ -105,9 +107,12 @@ def apply_favor(recipes: dict, favor) -> dict:
 
 def plan(gd, valuer, stock, favor, cap: int = 225, quests: dict | None = None,
          reuse: dict[int, tuple[float, float]] | None = None, caps: dict[int, int] | None = None,
-         craft_once: dict[int, int] | None = None, exclude: frozenset[int] = frozenset()) -> Plan:
+         craft_once: dict[int, int] | None = None, exclude: frozenset[int] = frozenset(),
+         one_time_in_full: bool = False) -> Plan:
     """caps: profession -> target skill (default Blacksmithing and Enchanting to `cap`).
     craft_once: profession -> recipe crafted once on reaching its cap. exclude: recipes not to use.
+    one_time_in_full: in gold mode, charge a recipe's one-time costs (pattern, fee, tools) in full
+    rather than spread over the points it could cover (a candidate route; see compare.settle_routes).
     reuse: item -> (count later steps consume, value per unit), credited when a step makes it."""
     quests = quests or {}
     reuse = reuse or {}
@@ -270,6 +275,7 @@ def plan(gd, valuer, stock, favor, cap: int = 225, quests: dict | None = None,
         learn_cost, favor_cost, scroll_kind, _reqs = lo
         learned.add(r.spell_id)
         p.learned.append(r.spell_id)
+        p.learn_log.append((r.skill_line, s, r.spell_id, scroll_kind or r.source))
         if r.source == "starter":
             return Cost()
         favor_left -= favor_cost
@@ -300,6 +306,7 @@ def plan(gd, valuer, stock, favor, cap: int = 225, quests: dict | None = None,
         p.fees += nxt.fee
         spent += Cost(nxt.fee, nxt.fee)
         rank_cap[prof] = nxt.cap
+        p.ranks.append((prof, s, nxt.cap, nxt.fee))
         p.events.append(f"{name} {s}: train rank up to {nxt.cap} ({money(nxt.fee)})")
 
     def craft_once_step(prof, spell):
@@ -353,6 +360,7 @@ def plan(gd, valuer, stock, favor, cap: int = 225, quests: dict | None = None,
                 p.fees += nxt.fee
                 spent += Cost(nxt.fee, nxt.fee)
                 rank_cap[prof] = nxt.cap
+                p.ranks.append((prof, s, nxt.cap, nxt.fee))
                 p.events.append(f"{name} {s}: train rank up to {nxt.cap} ({money(nxt.fee)})")
             continue
 
@@ -411,7 +419,8 @@ def plan(gd, valuer, stock, favor, cap: int = 225, quests: dict | None = None,
             score = c.score - out_val + one_time / usable
             if valuer.mode == "gold":  # gold spent first; among equal gold, the lower total value
                 one_cash = lo[0].cash + sum(t["cost"].cash for t in tools)
-                key = (round(c.cash + one_cash / usable - reuse_val, 2), score, r.spell_id)
+                spread = 1 if one_time_in_full else usable
+                key = (round(c.cash + one_cash / spread - reuse_val, 2), score, r.spell_id)
             else:
                 key = (score, r.spell_id)
             if best is None or key < best[0]:
