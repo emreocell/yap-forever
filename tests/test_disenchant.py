@@ -17,10 +17,25 @@ def item(ilvl, cls=4, quality=2):
 
 class DisenchantTests(unittest.TestCase):
     def test_skill_gate(self):
-        self.assertEqual(de.de_skill_needed(20), 1)
-        self.assertEqual(de.de_skill_needed(22), 25)
-        self.assertEqual(de.de_skill_needed(40), 100)
+        # Forever: no gate up to item level 44, seen in play (game-rules.md).
+        for ilvl in (20, 22, 40, 44, 45):
+            self.assertEqual(de.de_skill_needed(ilvl), 1, ilvl)
+        # Higher bands are not confirmed yet and keep the Classic gate.
+        self.assertEqual(de.de_skill_needed(46), 150)
         self.assertEqual(de.de_skill_needed(60), 200)
+
+    def test_skillup_thresholds_match_play(self):
+        # game-rules.md: about 19 disenchants to reach 20, 46 to 40, 73 to 50, 190 to 60.
+        self.assertEqual(de.DE_THRESHOLDS, (1, 20, 40, 60))
+        from yap_forever.costmodel import skillup_chance
+        total, at = 0.0, {}
+        for s in range(1, 60):
+            total += 1 / skillup_chance(s, de.DE_THRESHOLDS)
+            at[s + 1] = total
+        self.assertEqual(round(at[20]), 19)
+        self.assertEqual(round(at[40]), 46)
+        self.assertEqual(round(at[50]), 73)
+        self.assertEqual(round(at[60]), 190)
 
     def test_armor_yield(self):
         y = de.de_yield(item(22))

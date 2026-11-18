@@ -3,10 +3,11 @@ import dataclasses
 from dataclasses import dataclass, field
 
 from yap_forever.costmodel import VENDOR_TOOLS, Cost, Pools, bars_to_ore, money, skillup_chance
-from yap_forever.disenchant import de_skill_needed, de_yield
+from yap_forever.disenchant import DE_THRESHOLDS, de_skill_needed, de_yield
 from yap_forever.gamedata import BS, ENCH, PROFESSIONS
 
 START_CAP = 75  # Apprentice
+DISENCHANT = 0  # Step.spell_id of an Enchanting skill-up from disenchanting
 BUFFER = 1.15  # extra crafts on yellow and green steps, which are expected values, not promises
 
 
@@ -93,6 +94,7 @@ def plan(gd, valuer, stock, favor, cap: int = 225, quests: dict | None = None,
     soft_stalls: set[int] = set()  # stalled for lack of materials; retried when new ones appear
     spent = Cost()
     favor_left = stock.favor
+    de_credit = 0.0  # disenchants done that have not yet added up to a skill-up
     ench_reagents = {i for r in recipes.values() if r.skill_line == ENCH for i in r.reagents}
 
     def tool_held(cat):
@@ -161,8 +163,30 @@ def plan(gd, valuer, stock, favor, cap: int = 225, quests: dict | None = None,
                     pools.made[mat] = pools.made.get(mat, 0) + n * per
                     p.de_materials[mat] = p.de_materials.get(mat, 0) + n * per
                 p.events.append(f"Enchanting {skill[ENCH]}: disenchant {n:.0f} {gd.name(item)}")
+                de_skillups(n)
                 released = True
         return released
+
+    def de_skillups(n):
+        """Disenchanting n items gives Enchanting skill-ups at the expected rate."""
+        nonlocal de_credit
+        de_credit += n
+        while skill[ENCH] < min(cap, rank_cap[ENCH]):
+            s = skill[ENCH]
+            chance = skillup_chance(s, DE_THRESHOLDS)
+            if chance <= 0:
+                de_credit = 0.0
+                return
+            need = 1 / chance
+            if de_credit + 1e-9 < need:
+                return
+            de_credit -= need
+            last = next((x for x in reversed(p.steps) if x.profession == ENCH), None)
+            if last and last.spell_id == DISENCHANT and last.skill_to == s:
+                last.skill_to, last.crafts = s + 1, last.crafts + need
+            else:
+                p.steps.append(Step(ENCH, s, s + 1, DISENCHANT, "Disenchant greens", need, 0, 0))
+            skill[ENCH] = s + 1
 
     def should_hold(item, opts):
         if max(opts, key=opts.get) == "de":
@@ -170,6 +194,9 @@ def plan(gd, valuer, stock, favor, cap: int = 225, quests: dict | None = None,
         info = gd.items.get(item)
         if not info or de_skill_needed(info.item_level) > cap:
             return False
+        # While disenchanting still gives Enchanting skill, that beats selling the green.
+        if de_yield(info) and skill[ENCH] < min(cap, DE_THRESHOLDS[3]):
+            return True
         # Disenchanting is the only source of an Enchanting reagent missing from the AH.
         return any(m in ench_reagents and valuer.market.depth(m) == 0 for m in de_yield(info))
 
