@@ -60,6 +60,18 @@ class StockTests(unittest.TestCase):
         self.assertEqual(s.marker, (2589, 71313))
 
 
+class SkillsTests(unittest.TestCase):
+    def test_load_stock_skills_by_name(self):
+        with tempfile.TemporaryDirectory() as d:
+            s = config.load_stock(write(d, "stock.toml", STOCK + "\n[skills]\nblacksmithing = 184\nenchanting = 200\n"))
+        self.assertEqual(s.skills, {164: 184, 333: 200})
+
+    def test_unknown_profession_name_raises(self):
+        with tempfile.TemporaryDirectory() as d:
+            with self.assertRaises(ValueError):
+                config.load_stock(write(d, "stock.toml", STOCK + "\n[skills]\nbasketweaving = 10\n"))
+
+
 class CredentialTests(unittest.TestCase):
     def test_credentials_repr_masks(self):
         c = config.Credentials("myclientid", "s3cr3tvalue", "eu")

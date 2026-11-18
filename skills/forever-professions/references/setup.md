@@ -34,6 +34,9 @@ cash_gold = 25       # soft budget
 mining = 0           # Mining skill, if the character mines
 short_farm_ore = 0
 target = 150         # skill to plan both professions to
+[skills]             # current profession skills; the plan starts here (absent = 1)
+blacksmithing = 120
+enchanting = 95
 [items]              # what the character already has: item ID = count
 2840 = 40            # Copper Bar
 ```

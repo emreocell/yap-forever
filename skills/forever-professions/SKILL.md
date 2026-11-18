@@ -29,7 +29,8 @@ player what changed, running the planner, and walking them through the result.
    [references/setup.md](references/setup.md) with the player, one step at a time.
 2. **Ask what changed** since the last plan: level, profession skills, gold, Favor standing,
    free bag slots, and what has piled up (greens to disenchant, leftover materials). Update their
-   character's `stock.toml` with what they confirm.
+   character's `stock.toml` with what they confirm, including the `[skills]` table: the plan
+   starts from those skills.
 3. **Refresh prices** with `prices`. Prices update about once an hour.
 4. **Run the planner** for what they asked: `plan --character NAME`.
 5. **Walk through the result** top-down, craft by craft, as laid out in

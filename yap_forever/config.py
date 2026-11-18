@@ -5,6 +5,10 @@ from pathlib import Path
 
 STATIC_DIR = Path(__file__).resolve().parent / "data_static"
 
+# Profession names a player writes in stock.toml's [skills] table, and their skill line IDs.
+PROFESSION_IDS = {"alchemy": 171, "blacksmithing": 164, "enchanting": 333, "engineering": 202,
+                  "leatherworking": 165, "tailoring": 197}
+
 
 @dataclass(frozen=True)
 class Credentials:
@@ -30,6 +34,20 @@ class Stock:
     target: int = 225  # skill both professions are planned to
     mining_goal: int = 0  # Mining skill you'll reach while farming; 0 = current
     quest_item_sales: int | None = None  # quest items you expect to sell on the AH; None = no limit
+    skills: dict[int, int] = field(default_factory=dict)  # skill line -> current skill; absent = 1
+
+
+def _skills(table: dict) -> dict[int, int]:
+    out = {}
+    for name, value in table.items():
+        key = str(name).lower()
+        if key.isdigit():
+            out[int(key)] = int(value)
+        elif key in PROFESSION_IDS:
+            out[PROFESSION_IDS[key]] = int(value)
+        else:
+            raise ValueError(f"[skills] {name}: use one of {', '.join(sorted(PROFESSION_IDS))}")
+    return out
 
 
 def load_stock(path: Path) -> Stock:
@@ -50,4 +68,5 @@ def load_stock(path: Path) -> Stock:
         target=int(d.get("target", 225)),
         mining_goal=int(d.get("mining_goal", d.get("mining", 0))),
         quest_item_sales=int(d["quest_item_sales"]) if "quest_item_sales" in d else None,
+        skills=_skills(d.get("skills", {})),
     )
