@@ -1,9 +1,10 @@
 """Shopping list, mailbox trips and what to bring to a remote trainer.
 
-Ported from the old scripts/shopping.py, working on Plan steps. Every count includes the buffer on
-yellow and green steps (planner.step_factor) and is rounded up row by row, so the total is at least
-the sum of the rounded rows.
+Ported from the old scripts/shopping.py, working on Plan steps. Rows are counted in whole crafts with
+the buffer on yellow and green steps (planner.step_factor), so every material is a whole number of
+crafts' worth: nothing is left over that is too little for another craft.
 """
+import dataclasses
 import math
 
 from yap_forever.guide import gold
@@ -33,38 +34,97 @@ def batch_size(per_craft: dict, output, stack: dict, free: int) -> int:
     return best
 
 
-def route_rows(plan, gd) -> list[dict]:
-    """Rows with the buffer in every count; each intermediate crafted on the spot is crafted in one
-    go at its first row."""
-    rows = []
+def _sum(dicts) -> dict:
+    out: dict = {}
+    for d in dicts:
+        for i, q in d.items():
+            out[i] = out.get(i, 0) + q
+    return out
+
+
+def merged_steps(plan, gd) -> list[tuple]:
+    """(step, parts): runs of one recipe over consecutive skill points as one step, so the buffer is
+    rounded up once per run, not once per skill point."""
+    out: list[tuple] = []
+    latest: dict[int, int] = {}  # profession -> index of its latest entry (professions interleave)
     for st in plan.steps:
-        r = gd.recipes.get(st.spell_id)
-        if st.spell_id == DISENCHANT or r is None or st.skill_from >= st.skill_to:
+        if st.spell_id == DISENCHANT or st.spell_id not in gd.recipes or not (st.skill_from < st.skill_to or st.crafts > 0):
             continue
-        k = step_factor(st)
-        here = {i: q * st.crafts - st.materials.get(i, 0) - st.used_made.get(i, 0)
-                for i, q in r.reagents.items() if i in plan.crafted}
-        rows.append({"st": st, "n": math.ceil(st.crafts * k - 1e-9), "more": 0.0,
-                     "need": {i: q * k for i, q in st.materials.items()},
-                     "bank": {i: q * k for i, q in st.from_stock.items()},
-                     "here": {i: c * k for i, c in here.items() if c > 0.01},
-                     "earlier": {i: q * k for i, q in st.used_made.items() if q > 0.01}})
-    made_from = {r.output[0]: {i: q / r.output[1] for i, q in r.reagents.items()}
-                 for r in gd.recipes.values() if r.output}
-    for i in sorted({i for r in rows for i in r["here"]}):
-        first = next(r for r in rows if i in r["here"] or (gd.recipes[r["st"].spell_id].output or (None,))[0] == i)
-        for r in rows:
-            if r is first or i not in r["here"]:
+        at = latest.get(st.profession)
+        last = out[at] if at is not None else None
+        if (last and st.skill_from < st.skill_to and last[0].skill_from < last[0].skill_to
+                and last[0].spell_id == st.spell_id and last[0].profession == st.profession
+                and last[0].skill_to == st.skill_from):
+            parts = last[1] + [st]
+            out[at] = (dataclasses.replace(
+                last[0], skill_to=st.skill_to, crafts=sum(p.crafts for p in parts),
+                buffered=sum(p.crafts * step_factor(p) for p in parts),
+                cash=sum(p.cash for p in parts), economic=sum(p.economic for p in parts),
+                materials=_sum(p.materials for p in parts), from_stock=_sum(p.from_stock for p in parts),
+                used_made=_sum(p.used_made for p in parts)), parts)
+        else:
+            latest[st.profession] = len(out)
+            out.append((st, [st]))
+    return out
+
+
+def route_rows(plan, gd) -> list[dict]:
+    """Rows in whole crafts: n crafts (buffer included) take n times what one craft takes, so no count
+    leaves a remainder too small for another craft. Your own crafts from earlier rows are used first;
+    intermediates still missing are crafted in whole batches at the first row that needs or makes them.
+    need: what to bring (bank, mail or vendor); earlier: your own crafts (from any row) or disenchants used;
+    here: intermediates crafted on the spot; more: extra crafts of the row's own recipe for later rows."""
+    merged = merged_steps(plan, gd)
+    steps = [st for st, _parts in merged]
+    makes = {r.output[0]: r for r in gd.recipes.values() if r.output}
+    craftable = set(plan.crafted) | {gd.recipes[st.spell_id].output[0] for st in steps if gd.recipes[st.spell_id].output}
+    pool: dict[int, float] = {}  # your own crafts on hand
+    rows, missing = [], {}  # missing: intermediate -> [count, index of the first row needing it]
+    for st, parts in merged:
+        r, k = gd.recipes[st.spell_id], step_factor(st)
+        row = {"st": st, "parts": parts, "n": math.ceil(st.crafts * k - 1e-9), "more": 0, "need": {}, "here": {}, "earlier": {}}
+        for i, q in r.reagents.items():
+            d = q * row["n"]
+            if i in makes and i in craftable:
+                own = min(d, pool.get(i, 0))
+            else:  # disenchanted reagents: the planner's expected count, buffered
+                own = min(d, math.ceil(st.used_made.get(i, 0) * k - 1e-6))
+            if own:
+                row["earlier"][i] = own
+                if i in pool:
+                    pool[i] -= own
+            rest = d - own
+            planner_made = q * st.crafts - st.materials.get(i, 0) - st.used_made.get(i, 0)
+            if rest <= 0:
                 continue
-            c = r["here"].pop(i)
-            r["earlier"][i] = r["earlier"].get(i, 0) + c
-            for j, q in made_from.get(i, {}).items():
-                r["need"][j] = max(0.0, r["need"].get(j, 0) - c * q)
-                first["need"][j] = first["need"].get(j, 0) + c * q
-            if i in first["here"]:
-                first["here"][i] += c
+            if i in makes and i in craftable and not (st.materials.get(i, 0) > 1e-6 and planner_made <= 0.01):
+                m = missing.setdefault(i, [0, len(rows)])
+                m[0] += rest
+                row["earlier"][i] = row["earlier"].get(i, 0) + rest  # yours: crafted in the batch below
             else:
-                first["more"] += c  # the row that makes i as its own step makes these too
+                row["need"][i] = row["need"].get(i, 0) + rest
+        if r.output:
+            pool[r.output[0]] = pool.get(r.output[0], 0) + row["n"] * r.output[1]
+        rows.append(row)
+    for _ in range(4):  # nested intermediates (an intermediate of an intermediate)
+        nested: dict[int, list] = {}
+        for i, (count, at) in sorted(missing.items()):
+            maker = makes[i]
+            first = next((x for x in rows[:at] if gd.recipes[x["st"].spell_id].output == maker.output), rows[at])
+            crafts = math.ceil(count / maker.output[1] - 1e-9)
+            if first is not rows[at]:
+                first["more"] += crafts  # the row that makes i as its own step makes these too
+            else:
+                first["here"][i] = first["here"].get(i, 0) + count
+            for j, q in maker.reagents.items():
+                if j in makes and j in craftable:
+                    m = nested.setdefault(j, [0, rows.index(first)])
+                    m[0] += q * crafts
+                else:
+                    first["need"][j] = first["need"].get(j, 0) + q * crafts
+        if not nested:
+            break
+        missing = nested
     return rows
 
 
@@ -89,11 +149,11 @@ def _bank(plan) -> dict[int, float]:
     for st in plan.steps:
         for i, q in st.from_stock.items():
             out[i] = out.get(i, 0) + q
-    return out
+    return {i: math.ceil(q - 1e-6) for i, q in out.items()}  # you own whole items
 
 
 def _split(rows, plan, gd=None, left=None) -> dict[tuple[int, str], int]:
-    """(item, source) -> count over these rows, each row rounded up; source: bank, mail (AH) or vendor.
+    """(item, source) -> whole count over these rows; source: bank, mail (AH) or vendor.
     Farmed bars are left out (the keep list covers mining)."""
     left = _bank(plan) if left is None else left  # shared across trips, so the bank is used once
     out: dict[tuple[int, str], int] = {}
@@ -154,7 +214,8 @@ def render_shopping(plan, gd, market, stock) -> tuple[list[str], int | None]:
     owned = {i: float(n) for i, n in stock.items.items()}  # the buffer comes from the bank while it lasts
     split = _split(rows, plan, gd, dict(owned))
     lines = ["## Shopping list", "",
-             "Counts include the buffer and are rounded up row by row, so buying them never leaves you short.", "",
+             "Counts are for whole crafts, buffer included: you never run short, and nothing is left over "
+             "that is too little for another craft.", "",
              "| Item | Count | Where | Cost |", "|---|---:|---|---:|"]
     total = 0.0
     for (i, src), n in sorted(split.items(), key=lambda x: (x[0][1], gd.name(x[0][0]))):

@@ -252,3 +252,16 @@ class KeepGreensGuideTests(unittest.TestCase):
                             dataclasses.replace(toy.stock(), keep_greens=True), caps={BS: 10})
         row = next(l for l in text.splitlines() if "BS belt" in l and l.startswith("- **"))
         self.assertIn("keep for disenchanting on another character", row)
+
+
+class WholeCraftGuideTests(unittest.TestCase):
+    def test_range_line_counts_whole_crafts(self):
+        from yap_forever.planner import Plan, Step
+        gd = toy.gamedata(base_recipes() + [toy.recipe(10, "LW basic", LW, {toy.COPPER_BAR: 2})])
+        st = Step(LW, 1, 100, 10, "LW basic", 133.4, 0, 0, {toy.COPPER_BAR: 266.8})
+        st.buffered = st.crafts
+        p = Plan(steps=[st], final_skill={LW: 100})
+        text = render_guide(p, gd, toy.market(BARS), toy.stock(), caps={LW: 100})
+        self.assertIn("134× LW basic — 268 Copper Bar", text)
+        keep = text[text.index("## Keep while levelling"):text.index("## Route")]
+        self.assertIn("268", keep)
