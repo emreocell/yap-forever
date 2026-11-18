@@ -23,7 +23,7 @@
 | Load tests | None (local CLI) | default | a hosted service is planned |
 | Customer input files | Nice to have before designing imports (for example a sample of addon saved data before the phase-2 price import); otherwise a minimal assumption | default | |
 | Model and review depth | By the risk of the task, as named tiers (fast, regular, strong); each agent tool maps the tiers to its own models | default | |
-| Independent review | Before each tag, one review of the whole project by a different model family or a person | default | |
+| Independent review | Before each tag, one review of the whole project by a different model family or a person, given the skill's reference documents as the spec (lesson 9, 2026-11-18) | default, adapted | |
 | Agent decisions | Access, personal data and money always go to the owner; here that includes credentials, the repo's settings and visibility, force-pushes, and anything owner-specific entering the repo. The agent decides the rest and lists it for veto; an agent that did not write the list filters it before the owner sees it | default, adapted | |
 | Owner attention | Decisions reach the owner in batches, within the number per week set for the phase. The owner can declare a low-attention mode: agents then take only work that needs no decision | default | |
 | Document size | Guide size for a slice spec and for its plan: 40 KB each. Replaced text is deleted; history stays in git | default | |
