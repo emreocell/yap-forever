@@ -193,3 +193,30 @@ class SmeltFromStockTests(unittest.TestCase):
         c, pools = self.take(self.IRON_BAR, 5, {self.IRON_ORE: 3}, mining=125)
         self.assertEqual(pools.stock[self.IRON_ORE], 0)
         self.assertAlmostEqual(pools.farmed[self.IRON_BAR], 2)
+
+
+class CraftOrBuyTests(unittest.TestCase):
+    """Craft an intermediate only when it beats buying by a margin: 10% at skill 1, 5% at 300."""
+
+    def take_vest(self, bar_price, skill):
+        gd = toy.gamedata([toy.recipe(20, "Vest", 164, {toy.COPPER_BAR: 1}, (toy.VEST, 1), source="starter")])
+        v = Valuer(toy.market({toy.VEST: [(1000, 100)], toy.COPPER_BAR: [(bar_price, 100)]}), gd, toy.stock())
+        pools = Pools.from_stock(v.stock)
+        v.take(toy.VEST, 1, pools, skills={164: skill})
+        return "craft" if pools.crafted.get(toy.VEST) else "buy" if pools.bought.get(toy.VEST) else None
+
+    def test_craft_margin_falls_with_skill(self):
+        from yap_forever.costmodel import craft_margin
+        self.assertAlmostEqual(craft_margin(1), 0.90)
+        self.assertAlmostEqual(craft_margin(300), 0.95)
+        self.assertAlmostEqual(craft_margin(0), 0.90)
+        self.assertAlmostEqual(craft_margin(400), 0.95)
+        self.assertLess(craft_margin(100), craft_margin(200))
+
+    def test_low_skill_needs_10pct(self):
+        self.assertEqual(self.take_vest(880, 1), "craft")
+        self.assertEqual(self.take_vest(920, 1), "buy")
+
+    def test_high_skill_needs_5pct(self):
+        self.assertEqual(self.take_vest(940, 300), "craft")
+        self.assertEqual(self.take_vest(960, 300), "buy")

@@ -339,3 +339,29 @@ class ResolveGoalsTests(unittest.TestCase):
         favor = FavorData({4: 30}, {}, [])
         self.assertEqual(resolve_goals({BS: self.Goal(recipe="BS Mystery")}, self.gd, favor=favor),
                          ({BS: 50}, {BS: 4}))
+
+
+class RouteModeTests(unittest.TestCase):
+    def run_mode(self, mode, recipes, listings, bank):
+        gd = toy.gamedata(recipes)
+        st = toy.stock(bank)
+        return plan(gd, Valuer(toy.market(listings), gd, st, mode=mode), st, toy.NO_FAVOR, caps={BS: 20})
+
+    def test_gold_mode_prefers_bank_mats(self):
+        rs = [toy.recipe(11, "BS essence", BS, {toy.ESSENCE: 1}), toy.recipe(12, "BS iron", BS, {toy.IRON_BAR: 1})]
+        listings = {toy.ESSENCE: [(5000, 100)], toy.IRON_BAR: [(500, 100000)]}
+        bank = {toy.ESSENCE: 30}
+        self.assertEqual({s.spell_id for s in self.run_mode("gold", rs, listings, bank).steps}, {11})
+        self.assertEqual({s.spell_id for s in self.run_mode("value", rs, listings, bank).steps}, {12})
+
+    def test_gold_mode_breaks_cash_ties_by_value(self):
+        rs = [toy.recipe(11, "BS essence", BS, {toy.ESSENCE: 1}), toy.recipe(13, "BS dust", BS, {toy.DUST: 1})]
+        listings = {toy.ESSENCE: [(5000, 100)], toy.DUST: [(100, 100)]}
+        p = self.run_mode("gold", rs, listings, {toy.ESSENCE: 30, toy.DUST: 30})
+        self.assertEqual({s.spell_id for s in p.steps}, {13})
+        self.assertEqual(p.cash_total, 0)
+
+    def test_unknown_mode_raises(self):
+        gd = toy.gamedata([])
+        with self.assertRaises(ValueError):
+            Valuer(toy.market(), gd, toy.stock(), mode="fast")

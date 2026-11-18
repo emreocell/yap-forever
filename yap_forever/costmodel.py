@@ -16,6 +16,15 @@ STONES = {int(k): (v[0], v[1]) for k, v in ORE.get("stone", {}).items()}  # ston
 BARS = {int(k): (v[0], {int(a): b for a, b in v[1].items()}, v[2], v[3]) for k, v in ORE["bars"].items()}
 
 
+MODES = ("gold", "value")
+
+
+def craft_margin(skill: int) -> float:
+    """Craft an intermediate only when it costs less than this share of buying it: 0.90 at skill 1
+    (early materials cost tens of silver, small savings aren't worth a craft), 0.95 at 300."""
+    return 0.90 + 0.05 * (min(max(skill, 1), 300) - 1) / 299
+
+
 def skillup_chance(skill: int, t: tuple[int, int, int, int]) -> float:
     orange, yellow, _green, grey = t
     if skill < orange or skill >= grey:
@@ -63,8 +72,12 @@ class Pools:
 
 
 class Valuer:
-    def __init__(self, market, gd, stock):
-        self.market, self.gd, self.stock = market, gd, stock
+    def __init__(self, market, gd, stock, mode: str = "value"):
+        """mode "value": choose by total value (owned items at what they'd sell for);
+        "gold": choose by gold spent first (owned items free), total value second."""
+        if mode not in MODES:
+            raise ValueError(f"route mode must be one of {', '.join(MODES)}, not {mode!r}")
+        self.market, self.gd, self.stock, self.mode = market, gd, stock, mode
 
     # --- values ------------------------------------------------------------
     def owned_value(self, item: int) -> float:
@@ -166,29 +179,57 @@ class Valuer:
             extra = self._smelt_extras(item, need, pools, move) if item in BARS else Cost()
             return cost + extra + Cost(0, need * self.owned_value(item))
         buy = self.buy_option(item, need, pools.bought.get(item, 0))
+        if buy and depth < 2:  # craft instead when that is cheaper by more than the margin
+            log: list = []
+
+            def trial_move(d, k, delta):
+                d[k] = d.get(k, 0) + delta
+                log.append((d, k, delta))
+
+            trial = self._craft(item, need, pools, skills, trial_move, depth, learned)
+            for d, k, delta in reversed(log):
+                d[k] -= delta
+                if abs(d[k]) < 1e-9:
+                    del d[k]
+            if trial is not None:
+                made, recipe = trial
+                measure = (lambda c: c.cash) if self.mode == "gold" else (lambda c: c.economic)
+                if measure(made) < craft_margin(skills.get(recipe.skill_line, 0)) * buy[1] - 1e-9:
+                    return cost + self._craft(item, need, pools, skills, move, depth, learned)[0]
         if buy:
             kind, price = buy
             move(pools.bought if kind == "ah" else pools.vendor, item, need)
             return cost + Cost(price, price)
         if depth < 2:
-            for r in self.gd.recipes.values():
-                if not r.output or r.output[0] != item:
-                    continue
-                if r.source != "starter" and r.spell_id not in learned:
-                    continue
-                if skills.get(r.skill_line, 0) < r.required_skill:
-                    continue
-                crafts = need / r.output[1]
-                sub = Cost()
-                for reagent, q in r.reagents.items():
-                    c = self._take(reagent, q * crafts, pools, skills, move, depth + 1, learned)
-                    if c is None:
-                        sub = None
-                        break
-                    sub = sub + c
-                if sub is not None:
-                    move(pools.crafted, item, need)
-                    return cost + sub
+            crafted = self._craft(item, need, pools, skills, move, depth, learned)
+            if crafted is not None:
+                return cost + crafted[0]
+        return None
+
+    def _craft(self, item, need, pools, skills, move, depth, learned):
+        """(cost, recipe) of crafting `need` of item with a known recipe and the tools at hand, or None."""
+        held = set(pools.tools) | {i for i, n in pools.made.items() if n >= 1} | \
+            {i for i, n in pools.stock.items() if n >= 1}
+        for r in self.gd.recipes.values():
+            if not r.output or r.output[0] != item:
+                continue
+            if r.source != "starter" and r.spell_id not in learned:
+                continue
+            if skills.get(r.skill_line, 0) < r.required_skill:
+                continue
+            if any(not any(self.gd.satisfies(t, cat) for t in held) for cat in r.tools):
+                continue
+            crafts = need / r.output[1]
+            sub = Cost()
+            for reagent, q in r.reagents.items():
+                c = self._take(reagent, q * crafts, pools, skills, move, depth + 1, learned)
+                if c is None:
+                    sub = None
+                    break
+                sub = sub + c
+            if sub is not None:
+                move(pools.crafted, item, need)
+                return sub, r
         return None
 
     def _owned(self, item: int, pools: Pools) -> float:
