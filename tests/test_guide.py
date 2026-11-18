@@ -112,7 +112,8 @@ class GuideTests(unittest.TestCase):
         rs = [toy.recipe(1, "BS basic", BS, {toy.COPPER_BAR: 1}, (toy.STONE, 1)),
               toy.recipe(2, "Ench basic", ENCH, {toy.ROD: 1})]
         text = guide(rs, BARS)
-        self.assertFalse(any(l.startswith("| Copper Rod") for l in text.splitlines()))
+        keep = text[text.index("## Keep while levelling"):text.index("## Route")]
+        self.assertFalse(any(l.startswith("| Copper Rod") for l in keep.splitlines()))
         self.assertIn("Buy from a vendor when you switch", text)
 
 

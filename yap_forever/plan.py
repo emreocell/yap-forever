@@ -13,6 +13,7 @@ from yap_forever.prices import Market
 from yap_forever.quests import load_quest_plans
 from yap_forever.report import render, verdict
 from yap_forever.settings import Paths
+from yap_forever.shopping import render_shopping
 from yap_forever.trips import trip_alternatives
 
 REUSE_ROUNDS = 4
@@ -82,7 +83,8 @@ def write_reports(paths: Paths, stock_path: Path, standing: str, goals: dict) ->
     caps, once = resolve_goals(goals, gd, favor, quests)
     market = Market.load(paths.prices)
     routes, same = settle_routes(candidates(gd, market, stock, favor, caps, once, quests), caps)
-    table = compare(routes, gd, market, stock, same=same)
+    trips = {m: render_shopping(r, gd, market, stock)[1] for m, r in routes.items()} if stock.bag_slots else None
+    table = compare(routes, gd, market, stock, mailbox_trips=trips, same=same)
     today = date.today().isoformat()
     paths.reports.mkdir(parents=True, exist_ok=True)
     files: dict[str, Path] = {}
