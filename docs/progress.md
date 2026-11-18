@@ -18,3 +18,4 @@ One line per finished task. Plans are private to the owner; tasks are named by p
 | 2026-11-18 | 1.12 | Plans start from the character's current skills (`[skills]` in `stock.toml`) and ranks already trained (independent review, finding 2) | #12 |
 | 2026-11-18 | 1.13 | 15% buffer on yellow and green steps in the guide and report, rounded up; guide and report counts agree (independent review, finding 3) | #13 |
 | 2026-11-18 | 1.14 | Prices record their house, region and ruleset; a refresh for another house downloads in full; commodities are checked apart from auctions; `plan` refuses prices from another house (independent review, finding 5) | #14 |
+| 2026-11-18 | 1.15 | Bars that would be mined come first from ore, coal and bars in the bank (smelted, component bars in turn); banked coal counts at its value (independent review, finding 1) | #15 |
