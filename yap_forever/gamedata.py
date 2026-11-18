@@ -6,6 +6,7 @@ import csv
 import os
 import sys
 import urllib.request
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -13,7 +14,8 @@ from yap_forever import settings
 from yap_forever.lualit import extract_table, parse
 
 BS, ENCH = 164, 333
-PROFESSIONS = {BS: "Blacksmithing", ENCH: "Enchanting"}
+PROFESSIONS = {171: "Alchemy", BS: "Blacksmithing", ENCH: "Enchanting", 202: "Engineering",
+               165: "Leatherworking", 197: "Tailoring"}  # names; what loads is load_gamedata's choice
 
 SKILLUP_SHA = "77337fa60453304ab0ae656466807037802435bc"
 QUESTIE_SHA = "ae4404b01a45163d3ef05909395b29aafc437bc2"
@@ -47,6 +49,7 @@ class ItemInfo:
     sell_price: int
     buy_price: int
     no_disenchant: bool = False  # client flag; e.g. Enchanting's own wands
+    stack: int = 1  # most of one item a bag slot holds
 
 
 @dataclass
@@ -140,7 +143,9 @@ def _quest_items(quests: dict) -> set[int]:
     return items
 
 
-def load_gamedata(d: Path | None = None) -> GameData:
+def load_gamedata(d: Path | None = None, professions: Iterable[int] = (BS, ENCH)) -> GameData:
+    """Game data with the recipes (and starter recipes) of `professions` only."""
+    professions = set(professions)
     d = Path(d) if d is not None else settings.paths().gamedata
     recipes_src = (d / "Recipes.lua").read_text(encoding="utf-8")
     data = parse(extract_table(recipes_src, "RecipeData"))
@@ -152,7 +157,7 @@ def load_gamedata(d: Path | None = None) -> GameData:
     ranks = parse(extract_table(trainer_src, "TrainerRanks"))
     vendor = _lua(d / "Vendor.lua", "VendorPrices")
     starters = {int(r["Spell"]) for r in _rows(d / "SkillLineAbility.csv")
-                if r["SkillLine"] in ("164", "333") and r["AcquireMethod"] == "1"}
+                if int(r["SkillLine"]) in professions and r["AcquireMethod"] == "1"}
 
     tools: dict[int, list[int]] = {}
     for r in _rows(d / "SpellTotems.csv"):
@@ -162,7 +167,7 @@ def load_gamedata(d: Path | None = None) -> GameData:
 
     recipes = {}
     for spell, rd in data.items():
-        if rd.get("skillLine") not in PROFESSIONS or spell not in thresholds:
+        if rd.get("skillLine") not in professions or spell not in thresholds:
             continue
         t = tuple(int(x) for x in thresholds[spell])
         req = [t[0]]
@@ -189,7 +194,8 @@ def load_gamedata(d: Path | None = None) -> GameData:
         i = int(r["ID"])
         items[i] = ItemInfo(i, r["Display_lang"], int(r["OverallQualityID"]), int(r["ItemLevel"]),
                             classes.get(i, -1), int(r["SellPrice"]), int(r["BuyPrice"]),
-                            bool(int(r.get("Flags_0") or 0) & NO_DISENCHANT_FLAG))
+                            bool(int(r.get("Flags_0") or 0) & NO_DISENCHANT_FLAG),
+                            max(1, int(r.get("Stackable") or 1)))
         cat = int(r.get("TotemCategoryID") or 0)
         if cat:
             item_cat[i] = cat
