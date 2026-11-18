@@ -10,6 +10,7 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+import zlib
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -108,6 +109,9 @@ class Client:
             with self.opener(req, timeout=120) as r:
                 raw = r.read()
                 hdrs = r.headers
+            if hdrs.get("Content-Encoding") == "gzip":
+                raw = gzip.decompress(raw)
+            body = json.loads(raw) if raw else None
         except urllib.error.HTTPError as e:
             e.close()
             if e.code == 304:
@@ -117,9 +121,9 @@ class Client:
             raise ApiError(e.code, path) from None
         except (urllib.error.URLError, TimeoutError, OSError) as e:
             raise ApiError(0, path, str(getattr(e, "reason", e))) from None
-        if hdrs.get("Content-Encoding") == "gzip":
-            raw = gzip.decompress(raw)
-        return Response(200, json.loads(raw) if raw else None, hdrs.get("Last-Modified"))
+        except (EOFError, ValueError, zlib.error) as e:  # cut off or garbled on the way
+            raise ApiError(0, path, f"damaged response: {e}") from None
+        return Response(200, body, hdrs.get("Last-Modified"))
 
 
 def namespace(region: str) -> str:

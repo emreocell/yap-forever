@@ -61,4 +61,8 @@ def load_house(path: Path) -> int:
     if not path.exists():
         raise FileNotFoundError(
             f'no auction house yet: post a marker listing in game, then run "{command_hint("probe --item ID --buyout COPPER")}"')
-    return int(json.loads(path.read_text(encoding="utf-8"))["house"])
+    try:
+        return int(json.loads(path.read_text(encoding="utf-8"))["house"])
+    except (ValueError, KeyError, TypeError) as e:
+        raise ValueError(f'{path} is damaged ({type(e).__name__}): post a marker listing in game, then run '
+                         f'"{command_hint("probe --item ID --buyout COPPER")}"') from None
