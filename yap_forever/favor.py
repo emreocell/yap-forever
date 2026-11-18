@@ -3,7 +3,7 @@ import tomllib
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from yap_forever.config import USER_DIR
+from yap_forever import settings
 
 
 @dataclass
@@ -20,8 +20,8 @@ class FavorData:
     turnins: list[Turnin] = field(default_factory=list)
 
 
-def load_favor(path: Path = USER_DIR / "favor.toml") -> FavorData:
-    path = Path(path)
+def load_favor(path: Path | None = None) -> FavorData:
+    path = Path(path) if path is not None else settings.paths().root / "favor.toml"
     if not path.exists():
         return FavorData({}, {}, [])
     with open(path, "rb") as f:

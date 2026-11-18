@@ -3,10 +3,11 @@ import unittest
 from pathlib import Path
 
 from yap_forever import gamedata
-from yap_forever.config import DATA_DIR, STATIC_DIR
+from yap_forever import settings
+from yap_forever.config import STATIC_DIR
 
 FIX = Path(__file__).parent / "fixtures" / "gamedata"
-REAL = DATA_DIR / "gamedata"
+REAL = settings.paths(settings.home({})).gamedata  # the player's real cache, not the test home
 
 
 class GameDataTests(unittest.TestCase):

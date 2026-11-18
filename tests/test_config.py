@@ -3,7 +3,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from yap_forever import config
+from yap_forever import config, settings
 
 STOCK = """
 level = 37
@@ -72,21 +72,21 @@ class CredentialTests(unittest.TestCase):
             p = write(d, "config.json",
                       '{"client_id": "a", "client_secret": "b", "region": "eu"}', 0o644)
             with self.assertRaises(PermissionError):
-                config.load_credentials(p)
+                settings.load_credentials(p)
 
     def test_credentials_empty_values(self):
         with tempfile.TemporaryDirectory() as d:
             p = write(d, "config.json",
                       '{"client_id": "", "client_secret": "", "region": "eu"}')
             with self.assertRaises(ValueError) as cm:
-                config.load_credentials(p)
+                settings.load_credentials(p)
         self.assertIn("fill in client_id and client_secret in config.json", str(cm.exception))
 
     def test_credentials_load(self):
         with tempfile.TemporaryDirectory() as d:
             p = write(d, "config.json",
                       '{"client_id": "a", "client_secret": "b", "region": "eu"}')
-            c = config.load_credentials(p)
+            c = settings.load_credentials(p)
         self.assertEqual((c.client_id, c.client_secret, c.region), ("a", "b", "eu"))
 
 

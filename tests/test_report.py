@@ -1,7 +1,9 @@
 import unittest
 
 from tests import toy
-from yap_forever.config import USER_DIR, Credentials
+from yap_forever import settings
+from yap_forever.config import Credentials
+USER_DIR = settings.home({})  # the player's real folder, not the test home
 from yap_forever.costmodel import Valuer
 from yap_forever.favor import load_favor
 from yap_forever.planner import Plan, plan
@@ -52,10 +54,10 @@ class RenderTests(unittest.TestCase):
     @unittest.skipUnless((USER_DIR / "favor.toml").exists(), "favor.toml not written yet")
     def test_real_favor_toml_parses(self):
         from yap_forever import gamedata
-        fav = load_favor()
+        fav = load_favor(USER_DIR / "favor.toml")
         self.assertTrue(fav.recipes)
-        if (gamedata.GD_DIR / "Recipes.lua").exists():
-            gd = gamedata.load_gamedata()
+        if (settings.paths(USER_DIR).gamedata / "Recipes.lua").exists():
+            gd = gamedata.load_gamedata(settings.paths(USER_DIR).gamedata)
             for spell in fav.recipes:
                 self.assertIn(gd.recipes[spell].skill_line, (164, 333))
 
