@@ -19,7 +19,7 @@ planner.de_skill_needed = costmodel.de_skill_needed = NEVER
 planner.de_yield = costmodel.de_yield = lambda _info: {}
 
 gamedata.PROFESSIONS = {**PROFS, DUMMY: "none"}
-gd = gamedata.load_gamedata()
+gd = gamedata.load_gamedata(professions=PROFS)
 starters = {int(r["Spell"]) for r in csv.DictReader(open(settings.paths().gamedata / "SkillLineAbility.csv", encoding="utf-8", newline=""))
             if int(r["SkillLine"]) in PROFS and r["AcquireMethod"] == "1"}
 for s, r in list(gd.recipes.items()):

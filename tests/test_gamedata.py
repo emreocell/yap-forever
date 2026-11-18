@@ -45,6 +45,23 @@ class GameDataTests(unittest.TestCase):
         self.assertNotIn(2149, self.gd.recipes)
         self.assertEqual({r.skill_line for r in self.gd.recipes.values()}, {164, 333})
 
+    def test_load_only_planned_professions(self):
+        gd = gamedata.load_gamedata(FIX, professions=(165,))
+        self.assertIn(2149, gd.recipes)
+        self.assertEqual({r.skill_line for r in gd.recipes.values()}, {165})
+
+    def test_starters_for_any_profession(self):
+        gd = gamedata.load_gamedata(FIX, professions=(165,))
+        self.assertEqual(gd.recipes[2149].source, "starter")
+
+    def test_item_stack_size(self):
+        self.assertEqual(self.gd.items[2840].stack, 20)
+        self.assertEqual(self.gd.items[2851].stack, 1)  # 0 in the data
+        self.assertEqual(self.gd.items[2857].stack, 1)  # empty
+
+    def test_professions_names_all_crafts(self):
+        self.assertEqual(set(gamedata.PROFESSIONS), {164, 165, 171, 197, 202, 333})
+
     def test_tools_from_spelltotems(self):
         self.assertEqual(self.gd.recipes[7418].tools, [373])
         self.assertEqual(self.gd.recipes[2661].tools, [162])

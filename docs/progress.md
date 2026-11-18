@@ -32,3 +32,5 @@ One line per finished task. Plans are private to the owner; tasks are named by p
 | 2026-11-18 | 1.26 | Ready for outside contributors: commit identity check covers only the owner's commits; CONTRIBUTING, SECURITY, CODEOWNERS for the skill, data and rules; issue and pull request templates; agent rules for outside pull requests | #26 |
 | 2026-11-18 | 1.27 | GitHub rulesets replace classic protection: `main` needs a PR, green CI and code-owner review, admins bypass only by merging a PR; `v*` tags immutable; private vulnerability reporting on; `AGENTS.md` says when `--admin` is allowed | #27 |
 | 2026-11-18 | 1.28 | Corrects 1.27: with 0 required approvals the code-owner rule does not block the owner's PRs, so no `--admin`; CODEOWNERS routes outside PRs to the owner | #28 |
+| 2026-11-18 | 1.29 | Report's "Order A" text matches the planner since #22 and #24 (outside contribution) | #47 |
+| 2026-11-18 | 2.1 | Game data loads the recipes and starter recipes of the professions asked for (any of the six crafts), and each item's stack size; profession names cover all six | #51 |
