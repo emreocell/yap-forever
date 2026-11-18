@@ -17,3 +17,4 @@ One line per finished task. Plans are private to the owner; tasks are named by p
 | 2026-11-18 | 1.11 | Commit identity check (noreply after a baseline), stacked-PR rule in `AGENTS.md`, CI with full history and read-only permissions, setup record updated | #11 |
 | 2026-11-18 | 1.12 | Plans start from the character's current skills (`[skills]` in `stock.toml`) and ranks already trained (independent review, finding 2) | #12 |
 | 2026-11-18 | 1.13 | 15% buffer on yellow and green steps in the guide and report, rounded up; guide and report counts agree (independent review, finding 3) | #13 |
+| 2026-11-18 | 1.14 | Prices record their house, region and ruleset; a refresh for another house downloads in full; commodities are checked apart from auctions; `plan` refuses prices from another house (independent review, finding 5) | #14 |

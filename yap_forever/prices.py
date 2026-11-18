@@ -13,6 +13,11 @@ class Market:
         # item -> [(unit price, quantity)] sorted cheapest first
         self.listings = {i: sorted(v) for i, v in listings.items()}
         self.snapshot_time = snapshot_time
+        # Which house these prices belong to, and the commodities snapshot time (set by fetch).
+        self.house: int | None = None
+        self.region = ""
+        self.ruleset: int | None = None
+        self.commodities_time = ""
 
     @classmethod
     def from_snapshot(cls, regular: dict, commodities: dict, snapshot_time: str = "") -> "Market":
@@ -53,7 +58,8 @@ class Market:
     def save(self, path: Path | None = None) -> None:
         path = Path(path) if path is not None else settings.paths().prices
         path.parent.mkdir(parents=True, exist_ok=True)
-        data = {"snapshot_time": self.snapshot_time,
+        data = {"snapshot_time": self.snapshot_time, "commodities_time": self.commodities_time,
+                "house": self.house, "region": self.region, "ruleset": self.ruleset,
                 "listings": {str(i): v for i, v in self.listings.items()}}
         path.write_text(json.dumps(data), encoding="utf-8")
 
@@ -61,30 +67,46 @@ class Market:
     def load(cls, path: Path | None = None) -> "Market":
         path = Path(path) if path is not None else settings.paths().prices
         d = json.loads(path.read_text(encoding="utf-8"))
-        return cls({int(i): [tuple(x) for x in v] for i, v in d["listings"].items()},
-                   d.get("snapshot_time", ""))
+        m = cls({int(i): [tuple(x) for x in v] for i, v in d["listings"].items()},
+                d.get("snapshot_time", ""))
+        m.house, m.region, m.ruleset = d.get("house"), d.get("region", ""), d.get("ruleset")
+        m.commodities_time = d.get("commodities_time", "")
+        return m
 
 
-def fetch(client, house: int, ruleset: int, prices_path: Path, log_path: Path) -> int:
-    """Download the house's snapshot unless it is unchanged. Returns an exit code."""
-    since = Market.load(prices_path).snapshot_time or None if prices_path.exists() else None
+def fetch(client, house: int, ruleset: int, prices_path: Path, log_path: Path, region: str = "") -> int:
+    """Download the house's auctions and commodities unless both are unchanged. Returns an exit code.
+
+    Saved snapshot times are only trusted for the same house, region and ruleset; a different house
+    always downloads in full. Auctions and commodities are separate snapshots and are checked apart.
+    """
+    old = Market.load(prices_path) if prices_path.exists() else None
+    same = old is not None and (old.house, old.region, old.ruleset) == (house, region, ruleset)
+    since = (old.snapshot_time or None) if same else None
+    comm_since = (old.commodities_time or None) if same else None
+    regular_path = bnet.house_path(house, ruleset)
+    comm_path = bnet.house_path(house, ruleset, commodities=True)
     try:
-        r = client.get(bnet.house_path(house, ruleset), if_modified_since=since)
+        r = client.get(regular_path, if_modified_since=since)
         if r.status == 304:
-            print(f"No new snapshot since {since}.")
-            return 0
-        comm = client.get(bnet.house_path(house, ruleset, commodities=True)).body or {}
+            c = client.get(comm_path, if_modified_since=comm_since)
+            if c.status == 304:
+                print(f"No new snapshot since {since}.")
+                return 0
+            r = client.get(regular_path)  # commodities moved: rebuild from both snapshots
+        else:
+            c = client.get(comm_path)
     except bnet.AuthError:
         print(bnet.AUTH_MESSAGE)
         return 2
     except bnet.ApiError as e:
         print(e if e.status == 0 else f"{e} — the Forever API route may have changed.")
         return 1
-    m = Market.from_snapshot(r.body or {}, comm, r.last_modified or "")
+    m = Market.from_snapshot(r.body or {}, c.body or {}, r.last_modified or "")
+    m.house, m.region, m.ruleset = house, region, ruleset
+    m.commodities_time = c.last_modified or ""
     m.save(prices_path)
     with open(log_path, "a", encoding="utf-8") as f:
         f.write(f"{r.last_modified}\n")
     print(f"Saved {len(m.listings)} items from house {house}, snapshot {r.last_modified}.")
     return 0
-
-
