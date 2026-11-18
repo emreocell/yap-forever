@@ -1,4 +1,4 @@
-{"id": 111, "name": "Alliance Auction House",
+{"id": 20, "name": "Alliance Auction House",
  "auctions": [
   {"id": 1, "item": {"id": 2589}, "buyout": 71313, "quantity": 1, "time_left": "LONG"},
   {"id": 2, "item": {"id": 2851}, "buyout": 5000, "quantity": 1, "time_left": "LONG"},

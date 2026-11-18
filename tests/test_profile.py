@@ -104,7 +104,7 @@ class ProbeTests(unittest.TestCase):
         client = FakeClient([3, 7, 9], [3, 7])
         with tempfile.TemporaryDirectory() as d:
             f = Path(d) / "house.json"
-            f.write_text('{"house": 111}', encoding="utf-8")
+            f.write_text('{"house": 4242}', encoding="utf-8")
             before = f.read_bytes()
             code = probe.run(client, "eu", 2, 2589, 71313, f)
             self.assertEqual(code, 1)

@@ -15,5 +15,9 @@ if __name__ == "__main__":
     if message:
         print(message)
         sys.exit(1)
+    # A console in a legacy code page (Windows pipes) can't show every path: escape what it can't.
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(errors="backslashreplace")
     from yap_forever import cli
     sys.exit(cli.main(sys.argv[1:]))

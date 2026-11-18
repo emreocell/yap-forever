@@ -104,9 +104,9 @@ class ClientTests(unittest.TestCase):
     def test_request_headers(self):
         op = FakeOpener()
         c = self.client(op)
-        c.get("/data/wow/ruleset/2/auctions/110")
+        c.get("/data/wow/ruleset/2/auctions/10")
         req = op.api_calls[0]
-        self.assertEqual(req.full_url, "https://eu.api.blizzard.com/data/wow/ruleset/2/auctions/110")
+        self.assertEqual(req.full_url, "https://eu.api.blizzard.com/data/wow/ruleset/2/auctions/10")
         self.assertEqual(req.get_header("Battlenet-namespace"), "dynamic-forever-eu")
         self.assertEqual(req.get_header("Authorization"), "Bearer tok1")
 
@@ -127,16 +127,16 @@ class MarkerTests(unittest.TestCase):
 
     def test_find_marker_regular(self):
         house, comm = self.load()
-        houses = {110: ({}, {}), 111: (house, {}), 119: ({}, comm)}
-        self.assertEqual(bnet.find_marker(houses, 2589, 71313), [111])
+        houses = {10: ({}, {}), 20: (house, {}), 30: ({}, comm)}
+        self.assertEqual(bnet.find_marker(houses, 2589, 71313), [20])
 
     def test_find_marker_commodity(self):
         house, comm = self.load()
-        houses = {110: ({}, {}), 111: (house, {}), 119: ({}, comm)}
-        self.assertEqual(bnet.find_marker(houses, 2770, 777), [119])
+        houses = {10: ({}, {}), 20: (house, {}), 30: ({}, comm)}
+        self.assertEqual(bnet.find_marker(houses, 2770, 777), [30])
 
     def test_find_marker_empty_house(self):
-        houses = {110: ({"id": 110, "name": "Alliance Auction House"}, {})}
+        houses = {10: ({"id": 10, "name": "Alliance Auction House"}, {})}
         self.assertEqual(bnet.find_marker(houses, 2589, 71313), [])
 
 
@@ -155,3 +155,15 @@ class NetworkErrorTests(unittest.TestCase):
                 c.get("/x")
         self.assertEqual(cm.exception.status, 0)
         self.assertIn("could not reach", str(cm.exception))
+
+
+class OfflineTests(unittest.TestCase):
+    def test_token_network_failure_is_api_error(self):
+        def opener(req, timeout=None):
+            raise urllib.error.URLError("no route to host")
+        with tempfile.TemporaryDirectory() as d:
+            c = bnet.Client(CREDS, opener=opener, token_cache=Path(d) / "t.json")
+            with self.assertRaises(bnet.ApiError) as cm:
+                c.get("/data/wow/ruleset/2/auctions/index")
+        self.assertEqual(cm.exception.status, 0)
+        self.assertIn("network", str(cm.exception))
