@@ -1,7 +1,13 @@
-# Disenchanting uncommon (green) armor and weapons — Classic rules, used as estimates.
+# Disenchanting uncommon (green) armor and weapons. Material odds are Classic, used as estimates.
 # Each material: [item ID, name, average count, chance] (armor odds).
 # Weapons swap the dust and essence chances; the shard stays the same.
-# skill = Enchanting skill needed to disenchant items up to max_ilvl.
+# skill = Enchanting skill needed to disenchant items up to max_ilvl. Forever has no gate up to
+# item level 44 (seen in play), so those bands are 1; higher bands keep the Classic gate until
+# someone confirms them.
+
+# Each disenchant is a chance at an Enchanting skill-up: orange, yellow, green, grey.
+# Matches play: about 19 disenchants to reach 20, 46 to 40, 73 to 50, 190 to 60.
+skill_ups = [1, 20, 40, 60]
 
 [[band]]
 max_ilvl = 15
@@ -18,35 +24,35 @@ shard = [10978, "Small Glimmering Shard", 1, 0.05]
 
 [[band]]
 max_ilvl = 25
-skill = 25
+skill = 1
 dust = [10940, "Strange Dust", 5, 0.75]
 essence = [10998, "Lesser Astral Essence", 1.5, 0.15]
 shard = [10978, "Small Glimmering Shard", 1, 0.10]
 
 [[band]]
 max_ilvl = 30
-skill = 50
+skill = 1
 dust = [11083, "Soul Dust", 1.5, 0.75]
 essence = [11082, "Greater Astral Essence", 1.5, 0.20]
 shard = [11084, "Large Glimmering Shard", 1, 0.05]
 
 [[band]]
 max_ilvl = 35
-skill = 75
+skill = 1
 dust = [11083, "Soul Dust", 3.5, 0.75]
 essence = [11134, "Lesser Mystic Essence", 1.5, 0.20]
 shard = [11138, "Small Glowing Shard", 1, 0.05]
 
 [[band]]
 max_ilvl = 40
-skill = 100
+skill = 1
 dust = [11137, "Vision Dust", 1.5, 0.75]
 essence = [11135, "Greater Mystic Essence", 1.5, 0.20]
 shard = [11139, "Large Glowing Shard", 1, 0.05]
 
 [[band]]
 max_ilvl = 45
-skill = 125
+skill = 1
 dust = [11137, "Vision Dust", 3.5, 0.75]
 essence = [11174, "Lesser Nether Essence", 1.5, 0.20]
 shard = [11177, "Small Radiant Shard", 1, 0.05]
