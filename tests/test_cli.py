@@ -28,6 +28,17 @@ class CliTests(unittest.TestCase):
         self.assertEqual(python_too_old((3, 10)), "yap-forever needs Python 3.11 or newer; you have 3.10.")
         self.assertIsNone(python_too_old((3, 11)))
 
+    def test_main_module_defines_on_old_python(self):
+        # Python < 3.10 evaluates annotations like "str | None" when a function is defined, which
+        # would crash before the version message. Only a lazily-evaluated module is safe there.
+        import ast
+        src = (Path(cli.__file__).parent / "__main__.py").read_text(encoding="utf-8")
+        tree = ast.parse(src)
+        lazy = any(isinstance(n, ast.ImportFrom) and n.module == "__future__"
+                   and any(a.name == "annotations" for a in n.names) for n in tree.body)
+        unions = [n for n in ast.walk(tree) if isinstance(n, ast.BinOp) and isinstance(n.op, ast.BitOr)]
+        self.assertTrue(lazy or not unions)
+
     def test_command_hint_windows(self):
         self.assertEqual(cli.command_hint("check", "nt"), "py -3 -m yap_forever check")
         self.assertEqual(cli.command_hint("check", "posix"), "python3 -m yap_forever check")

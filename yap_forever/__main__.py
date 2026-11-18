@@ -1,4 +1,6 @@
 """python3 -m yap_forever <command>: see cli.py. Checks the Python version before anything else."""
+from __future__ import annotations  # keeps this file importable on old Pythons
+
 import sys
 
 

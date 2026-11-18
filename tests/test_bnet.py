@@ -1,6 +1,7 @@
 import gzip
 import io
 import json
+import os
 import tempfile
 import unittest
 import urllib.error
@@ -64,7 +65,8 @@ class ClientTests(unittest.TestCase):
         c.get("/data/wow/ruleset/2/auctions/index")
         c.get("/data/wow/ruleset/2/auctions/index")
         self.assertEqual(op.token_calls, 1)
-        self.assertEqual(self.cache.stat().st_mode & 0o777, 0o600)
+        if os.name != "nt":  # Windows has no POSIX file modes
+            self.assertEqual(self.cache.stat().st_mode & 0o777, 0o600)
 
     def test_token_refreshed_when_expired(self):
         op = FakeOpener(expires_in=100)
