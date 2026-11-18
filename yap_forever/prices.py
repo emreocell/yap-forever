@@ -1,7 +1,4 @@
-"""AH prices for our house: download the snapshot and answer price questions.
-
-Usage: python3 prices.py
-"""
+"""Auction house prices: download a house's snapshot and answer price questions."""
 import json
 from pathlib import Path
 

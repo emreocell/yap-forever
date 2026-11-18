@@ -1,6 +1,6 @@
 """Game data for Blacksmithing and Enchanting: recipes, items, tools, quest items.
 
-Usage: python3 gamedata.py [--fetch] [--checks]
+Usage: python3 -m yap_forever.gamedata [--fetch] [--checks]
 """
 import csv
 import sys
