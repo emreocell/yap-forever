@@ -47,6 +47,12 @@ python3 -m yap_forever prices     # download your auction house's prices
 python3 -m yap_forever plan --character NAME
 ```
 
+## Contributing
+
+Bug reports, game-data corrections from play, and pull requests are welcome: see
+[CONTRIBUTING.md](CONTRIBUTING.md). Never post your API client ID or secret; see
+[SECURITY.md](SECURITY.md).
+
 ## Licence and credits
 
 GPL-3.0-or-later. Game data comes from other projects and Blizzard; see [CREDITS.md](CREDITS.md).

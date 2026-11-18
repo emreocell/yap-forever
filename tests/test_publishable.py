@@ -97,15 +97,38 @@ if __name__ == "__main__":
 
 
 # Commits up to and including this one may carry the owner's personal email (published before
-# the noreply switch on 2026-11-18); every later commit must use a noreply address.
+# the noreply switch on 2026-11-18); every later commit by the owner must use a noreply address.
+# Outside contributors' commits are theirs to sign as they like and are not checked.
 IDENTITY_BASELINE = "8583233"
+OWNER_LOGIN = "sableon"  # the repository owner's GitHub login (public in the repository URL)
 
 
 def non_noreply(emails: list[str]) -> list[str]:
     return sorted({e for e in emails if e and "noreply" not in e})
 
 
+def owner_names(authors: list[tuple[str, str]]) -> set[str]:
+    """Names the owner commits under: those used with the owner's GitHub noreply address."""
+    suffix = f"+{OWNER_LOGIN}@users.noreply.github.com"
+    return {name for name, email in authors if email.endswith(suffix)}
+
+
+def owner_leaks(rows: list[tuple[str, str, str, str]], names: set[str]) -> list[str]:
+    """Non-noreply addresses on the owner's side of (author, author email, committer, committer email)."""
+    return non_noreply([e for an, ae, cn, ce in rows for n, e in ((an, ae), (cn, ce)) if n in names])
+
+
 class CommitIdentityTests(unittest.TestCase):
+    def test_only_owner_commits_must_use_noreply(self):
+        personal = "x" + "@" + "mail.example"
+        owner_noreply = "1+" + OWNER_LOGIN + "@users.noreply.github.com"
+        rows = [("Owner Name", owner_noreply, "GitHub", "noreply@github.com"),
+                ("Some Contributor", personal, "Some Contributor", personal),
+                ("Owner Name", personal, "Owner Name", personal)]
+        names = owner_names([("Owner Name", owner_noreply), ("Some Contributor", personal)])
+        self.assertEqual(names, {"Owner Name"})
+        self.assertEqual(owner_leaks(rows, names), [personal])
+
     def test_non_noreply_flags_personal_addresses(self):
         personal = "x" + "@" + "mail.example"  # built up so the private-details scan ignores it
         self.assertEqual(non_noreply(["1+a@users.noreply.github.com", "noreply@github.com", personal]),
@@ -119,9 +142,13 @@ class CommitIdentityTests(unittest.TestCase):
         # On a pull_request run, HEAD is GitHub's throwaway test merge; check the PR's own commits
         # (its second parent). The real merge onto main is checked by the push run that follows.
         tip = "HEAD^2" if os.environ.get("GITHUB_EVENT_NAME") == "pull_request" else "HEAD"
-        emails = subprocess.run(["git", "log", f"{IDENTITY_BASELINE}..{tip}", "--format=%ae%n%ce"],
-                                cwd=ROOT, capture_output=True, text=True, encoding="utf-8",
-                                check=True).stdout.split()
-        self.assertEqual(len(non_noreply(emails)), 0,
+        def log(rng, fmt):
+            out = subprocess.run(["git", "log", *rng, f"--format={fmt}"], cwd=ROOT, capture_output=True,
+                                 text=True, encoding="utf-8", check=True).stdout
+            return [tuple(line.split("\t")) for line in out.splitlines() if line]
+
+        names = owner_names(log([tip], "%an%x09%ae") + log([tip], "%cn%x09%ce"))
+        rows = log([f"{IDENTITY_BASELINE}..{tip}"], "%an%x09%ae%x09%cn%x09%ce")
+        self.assertEqual(len(owner_leaks(rows, names)), 0,
                          "a commit after the baseline uses a personal email: set the repo's user.email "
                          "to your GitHub noreply address and turn on 'Keep my email private'")
