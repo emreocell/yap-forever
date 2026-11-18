@@ -1,0 +1,16 @@
+{
+  "name": "yap-forever",
+  "description": "Profession and gear planning for WoW: Forever players.",
+  "owner": {
+    "name": "sableon",
+    "url": "https://github.com/sableon"
+  },
+  "plugins": [
+    {
+      "name": "yap-forever",
+      "description": "Cheapest profession levelling routes and shopping lists for WoW: Forever, from your own auction house prices.",
+      "source": "./",
+      "category": "gaming"
+    }
+  ]
+}
