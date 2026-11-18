@@ -1,0 +1,573 @@
+# Merchant's Favor recipes and crate turn-ins: Alliance (Azeroth Commerce Authority),
+# Blacksmithing and Enchanting only so far.
+# Sources (read 2026-11-10): method.gg Merchant's Favor guide (3 Nov 2026), wowhandbook.com/professions/merchants-favor
+# (build 1.60.1.70862), foreverchanges.pro/merchants-favor. Prices agree across guides; partly from beta data.
+# `standing` is the reputation a recipe needs. Neutral data is certain; Friendly and Honored come from
+# guides that disagree (some say no standing is needed), so they are marked "disputed between guides".
+# Vendors: Stondry Darkhammer (Blacksmithing), Alynsia (Enchanting). Crates hand in to Marcy Baker.
+
+# --- Blacksmithing ---
+[[recipe]]
+spell_id = 1252262
+name = "Veteran's Chain Belt"
+favor = 30
+skill = 45
+standing = "Neutral"
+
+[[recipe]]
+spell_id = 1252263
+name = "Guard's Chain Belt"
+favor = 30
+skill = 45
+standing = "Neutral"
+
+[[recipe]]
+spell_id = 1252264
+name = "Protector's Chain Belt"
+favor = 30
+skill = 45
+standing = "Neutral"
+
+[[recipe]]
+spell_id = 1252265
+name = "Acolyte's Chain Belt"
+favor = 30
+skill = 45
+standing = "Neutral"
+
+[[recipe]]
+spell_id = 1252266
+name = "Crusader's Chain Belt"
+favor = 30
+skill = 45
+standing = "Neutral"
+
+[[recipe]]
+spell_id = 1252257
+name = "Veteran's Gloves"
+favor = 30
+skill = 80
+standing = "Neutral"
+
+[[recipe]]
+spell_id = 1252258
+name = "Guard's Gloves"
+favor = 30
+skill = 80
+standing = "Neutral"
+
+[[recipe]]
+spell_id = 1252259
+name = "Protector's Gloves"
+favor = 30
+skill = 80
+standing = "Neutral"
+
+[[recipe]]
+spell_id = 1252260
+name = "Acolyte's Gloves"
+favor = 30
+skill = 80
+standing = "Neutral"
+
+[[recipe]]
+spell_id = 1252261
+name = "Crusader's Gloves"
+favor = 30
+skill = 80
+standing = "Neutral"
+
+[[recipe]]
+spell_id = 1252252
+name = "Veteran's Boots"
+favor = 30
+skill = 85
+standing = "Neutral"
+
+[[recipe]]
+spell_id = 1252253
+name = "Guard's Boots"
+favor = 30
+skill = 85
+standing = "Neutral"
+
+[[recipe]]
+spell_id = 1252254
+name = "Protector's Boots"
+favor = 30
+skill = 85
+standing = "Neutral"
+
+[[recipe]]
+spell_id = 1252255
+name = "Acolyte's Boots"
+favor = 30
+skill = 85
+standing = "Neutral"
+
+[[recipe]]
+spell_id = 1252256
+name = "Crusader's Boots"
+favor = 30
+skill = 85
+standing = "Neutral"
+
+[[recipe]]
+spell_id = 1252277
+name = "Veteran's Silvered Chain Helm"
+favor = 30
+skill = 95
+standing = "Neutral"
+
+[[recipe]]
+spell_id = 1252278
+name = "Guard's Silvered Chain Helm"
+favor = 30
+skill = 95
+standing = "Neutral"
+
+[[recipe]]
+spell_id = 1252279
+name = "Protector's Silvered Chain Helm"
+favor = 30
+skill = 95
+standing = "Neutral"
+
+[[recipe]]
+spell_id = 1252280
+name = "Acolyte's Silvered Chain Helm"
+favor = 30
+skill = 95
+standing = "Neutral"
+
+[[recipe]]
+spell_id = 1252281
+name = "Crusader's Silvered Chain Helm"
+favor = 30
+skill = 95
+standing = "Neutral"
+
+[[recipe]]
+spell_id = 1252267
+name = "Veteran's Silvered Chain Shirt"
+favor = 30
+skill = 110
+standing = "Neutral"
+
+[[recipe]]
+spell_id = 1252268
+name = "Guard's Silvered Chain Shirt"
+favor = 30
+skill = 110
+standing = "Neutral"
+
+[[recipe]]
+spell_id = 1252269
+name = "Protector's Silvered Chain Shirt"
+favor = 30
+skill = 110
+standing = "Neutral"
+
+[[recipe]]
+spell_id = 1252270
+name = "Acolyte's Silvered Chain Shirt"
+favor = 30
+skill = 110
+standing = "Neutral"
+
+[[recipe]]
+spell_id = 1252271
+name = "Crusader's Silvered Chain Shirt"
+favor = 30
+skill = 110
+standing = "Neutral"
+
+[[recipe]]
+spell_id = 1252272
+name = "Veteran's Silvered Chain Leggings"
+favor = 30
+skill = 125
+standing = "Neutral"
+
+[[recipe]]
+spell_id = 1252273
+name = "Guard's Silvered Chain Leggings"
+favor = 30
+skill = 125
+standing = "Neutral"
+
+[[recipe]]
+spell_id = 1252274
+name = "Protector's Silvered Chain Leggings"
+favor = 30
+skill = 125
+standing = "Neutral"
+
+[[recipe]]
+spell_id = 1252275
+name = "Acolyte's Silvered Chain Leggings"
+favor = 30
+skill = 125
+standing = "Neutral"
+
+[[recipe]]
+spell_id = 1252276
+name = "Crusader's Silvered Chain Leggings"
+favor = 30
+skill = 125
+standing = "Neutral"
+
+[[recipe]]
+spell_id = 1252315
+name = "Officer's Gauntlet"
+favor = 60
+skill = 175
+standing = "Friendly"  # disputed between guides
+
+[[recipe]]
+spell_id = 1252316
+name = "Sentinel's Gauntlet"
+favor = 60
+skill = 175
+standing = "Friendly"  # disputed between guides
+
+[[recipe]]
+spell_id = 1252317
+name = "Warder's Gauntlet"
+favor = 60
+skill = 175
+standing = "Friendly"  # disputed between guides
+
+[[recipe]]
+spell_id = 1252318
+name = "Prefect's Gauntlet"
+favor = 60
+skill = 175
+standing = "Friendly"  # disputed between guides
+
+[[recipe]]
+spell_id = 1252319
+name = "Justicar's Gauntlet"
+favor = 60
+skill = 175
+standing = "Friendly"  # disputed between guides
+
+[[recipe]]
+spell_id = 1252325
+name = "Officer's Pauldrons"
+favor = 60
+skill = 210
+standing = "Friendly"  # disputed between guides
+
+[[recipe]]
+spell_id = 1252326
+name = "Sentinel's Pauldrons"
+favor = 60
+skill = 210
+standing = "Friendly"  # disputed between guides
+
+[[recipe]]
+spell_id = 1252327
+name = "Warder's Pauldrons"
+favor = 60
+skill = 210
+standing = "Friendly"  # disputed between guides
+
+[[recipe]]
+spell_id = 1252328
+name = "Prefect's Pauldrons"
+favor = 60
+skill = 210
+standing = "Friendly"  # disputed between guides
+
+[[recipe]]
+spell_id = 1252329
+name = "Justicar's Pauldrons"
+favor = 60
+skill = 210
+standing = "Friendly"  # disputed between guides
+
+[[recipe]]
+spell_id = 1252330
+name = "Officer's Wristguards"
+favor = 90
+skill = 225
+standing = "Honored"  # disputed between guides
+
+[[recipe]]
+spell_id = 1252331
+name = "Sentinel's Wristguards"
+favor = 90
+skill = 225
+standing = "Honored"  # disputed between guides
+
+[[recipe]]
+spell_id = 1252332
+name = "Warder's Wristguards"
+favor = 90
+skill = 225
+standing = "Honored"  # disputed between guides
+
+[[recipe]]
+spell_id = 1252333
+name = "Prefect's Wristguards"
+favor = 90
+skill = 225
+standing = "Honored"  # disputed between guides
+
+[[recipe]]
+spell_id = 1252334
+name = "Justicar's Wristguards"
+favor = 90
+skill = 225
+standing = "Honored"  # disputed between guides
+
+# --- Enchanting ---
+[[recipe]]
+spell_id = 1248752
+name = "Mystic Mushroom"
+favor = 45
+skill = 130
+standing = "Neutral"
+
+[[recipe]]
+spell_id = 1248755
+name = "Polished Driftwood Icon"
+favor = 45
+skill = 130
+standing = "Neutral"
+
+[[recipe]]
+spell_id = 1248754
+name = "Tenets of the Silver Hand"
+favor = 45
+skill = 130
+standing = "Neutral"
+
+[[recipe]]
+spell_id = 1248757
+name = "Enchant Weapon - Insight"
+favor = 45
+skill = 140
+standing = "Neutral"
+
+[[recipe]]
+spell_id = 1248760
+name = "Enchant Weapon - Recovery"
+favor = 45
+skill = 140
+standing = "Neutral"
+
+[[recipe]]
+spell_id = 1248805
+name = "Enchant Weapon - Revelation"
+favor = 45
+skill = 140
+standing = "Neutral"
+
+[[recipe]]
+spell_id = 1248703
+name = "Glimmering Staff"
+favor = 45
+skill = 140
+standing = "Neutral"
+
+[[recipe]]
+spell_id = 1248745
+name = "Orb of Mystic Insight"
+favor = 45
+skill = 140
+standing = "Neutral"
+
+[[recipe]]
+spell_id = 1248748
+name = "Orb of Souls"
+favor = 45
+skill = 140
+standing = "Neutral"
+
+[[recipe]]
+spell_id = 1248739
+name = "Soulstaff"
+favor = 45
+skill = 140
+standing = "Neutral"
+
+[[recipe]]
+spell_id = 1249059
+name = "Enchant Necklace - Agility"
+favor = 120
+skill = 210
+standing = "Friendly"  # disputed between guides
+
+[[recipe]]
+spell_id = 1249060
+name = "Enchant Necklace - Deflection"
+favor = 120
+skill = 210
+standing = "Friendly"  # disputed between guides
+
+[[recipe]]
+spell_id = 1249058
+name = "Enchant Necklace - Healing Power"
+favor = 120
+skill = 210
+standing = "Friendly"  # disputed between guides
+
+[[recipe]]
+spell_id = 1249057
+name = "Enchant Necklace - Spell Power"
+favor = 120
+skill = 210
+standing = "Friendly"  # disputed between guides
+
+[[recipe]]
+spell_id = 1249019
+name = "Enchant Necklace - Strength"
+favor = 120
+skill = 210
+standing = "Friendly"  # disputed between guides
+
+[[recipe]]
+spell_id = 1249006
+name = "Libram of Invocation"
+favor = 120
+skill = 210
+standing = "Friendly"  # disputed between guides
+
+[[recipe]]
+spell_id = 1248974
+name = "Talons of Wrath"
+favor = 120
+skill = 210
+standing = "Friendly"  # disputed between guides
+
+[[recipe]]
+spell_id = 1249015
+name = "Totem of Ancestral Protection"
+favor = 120
+skill = 210
+standing = "Friendly"  # disputed between guides
+
+[[recipe]]
+spell_id = 1249064
+name = "Dreamstaff"
+favor = 120
+skill = 220
+standing = "Friendly"  # disputed between guides
+
+[[recipe]]
+spell_id = 1249071
+name = "Enchant Chest - Absorption"
+favor = 120
+skill = 220
+standing = "Friendly"  # disputed between guides
+
+[[recipe]]
+spell_id = 1249061
+name = "Radiant Staff"
+favor = 120
+skill = 220
+standing = "Friendly"  # disputed between guides
+
+[[recipe]]
+spell_id = 1249069
+name = "Truesilver Conduit"
+favor = 120
+skill = 220
+standing = "Friendly"  # disputed between guides
+
+[[recipe]]
+spell_id = 1249070
+name = "Twisting Essence Jar"
+favor = 120
+skill = 220
+standing = "Friendly"  # disputed between guides
+
+# --- Crate turn-ins: the Waylaid Crate itself plus one bundle. Favor per crate from foreverchanges.pro;
+# Expert/Artisan amounts not known yet, so left out. ---
+[[turnin]]
+name = "Apprentice Ingots: 20 Copper Bar"
+favor = 10
+items = { 248703 = 1, 2840 = 20 }
+
+[[turnin]]
+name = "Apprentice Ingots: 20 Tin Bar"
+favor = 10
+items = { 248703 = 1, 3576 = 20 }
+
+[[turnin]]
+name = "Apprentice Ingots: 10 Bronze Bar"
+favor = 10
+items = { 248703 = 1, 2841 = 10 }
+
+[[turnin]]
+name = "Journeyman Ingots: 10 Silver Bar"
+favor = 20
+items = { 248706 = 1, 2842 = 10 }
+
+[[turnin]]
+name = "Journeyman Ingots: 20 Iron Bar"
+favor = 20
+items = { 248706 = 1, 3575 = 20 }
+
+[[turnin]]
+name = "Apprentice Ore: 20 Copper Ore"
+favor = 5
+items = { 248683 = 1, 2770 = 20 }
+
+[[turnin]]
+name = "Apprentice Ore: 20 Tin Ore"
+favor = 5
+items = { 248683 = 1, 2771 = 20 }
+
+[[turnin]]
+name = "Journeyman Ore: 10 Silver Ore"
+favor = 10
+items = { 248687 = 1, 2775 = 10 }
+
+[[turnin]]
+name = "Journeyman Ore: 20 Iron Ore"
+favor = 10
+items = { 248687 = 1, 2772 = 20 }
+
+[[turnin]]
+name = "Apprentice Curiosities: 20 Strange Dust"
+favor = 5
+items = { 248685 = 1, 10940 = 20 }
+
+[[turnin]]
+name = "Apprentice Curiosities: 4 Greater Magic Essence"
+favor = 5
+items = { 248685 = 1, 10939 = 4 }
+
+[[turnin]]
+name = "Apprentice Curiosities: 6 Small Glimmering Shard"
+favor = 5
+items = { 248685 = 1, 10978 = 6 }
+
+[[turnin]]
+name = "Apprentice Curiosities: 2 Large Glimmering Shard"
+favor = 5
+items = { 248685 = 1, 11084 = 2 }
+
+[[turnin]]
+name = "Journeyman Curiosities: 20 Soul Dust"
+favor = 10
+items = { 248689 = 1, 11083 = 20 }
+
+[[turnin]]
+name = "Journeyman Curiosities: 4 Greater Astral Essence"
+favor = 10
+items = { 248689 = 1, 11082 = 4 }
+
+[[turnin]]
+name = "Journeyman Curiosities: 6 Small Glowing Shard"
+favor = 10
+items = { 248689 = 1, 11138 = 6 }
+
+[[turnin]]
+name = "Journeyman Curiosities: 2 Large Glowing Shard"
+favor = 10
+items = { 248689 = 1, 11139 = 2 }
+

@@ -3,7 +3,8 @@ import tomllib
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from yap_forever import settings
+from yap_forever.config import STATIC_DIR
+from yap_forever.profile import STANDINGS
 
 
 @dataclass
@@ -20,14 +21,18 @@ class FavorData:
     turnins: list[Turnin] = field(default_factory=list)
 
 
-def load_favor(path: Path | None = None) -> FavorData:
-    path = Path(path) if path is not None else settings.paths().root / "favor.toml"
-    if not path.exists():
-        return FavorData({}, {}, [])
+def load_favor(standing: str, path: Path | None = None) -> FavorData:
+    """Recipes a character at `standing` may buy, and every crate turn-in."""
+    if standing not in STANDINGS:
+        raise ValueError(f"unknown Favor standing {standing!r}: use one of {', '.join(STANDINGS)}")
+    rank = STANDINGS.index(standing)
+    path = Path(path) if path is not None else STATIC_DIR / "favor.toml"
     with open(path, "rb") as f:
         d = tomllib.load(f)
     recipes, skills = {}, {}
     for r in d.get("recipe", []):
+        if STANDINGS.index(r.get("standing", "Neutral")) > rank:
+            continue
         recipes[int(r["spell_id"])] = int(r["favor"])
         if "skill" in r:
             skills[int(r["spell_id"])] = int(r["skill"])

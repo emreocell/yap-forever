@@ -51,10 +51,9 @@ class RenderTests(unittest.TestCase):
         self.assertIn("BS basic", text)
         self.assertIn("Ench basic", text)
 
-    @unittest.skipUnless((USER_DIR / "favor.toml").exists(), "favor.toml not written yet")
     def test_real_favor_toml_parses(self):
         from yap_forever import gamedata
-        fav = load_favor(USER_DIR / "favor.toml")
+        fav = load_favor("Exalted")
         self.assertTrue(fav.recipes)
         if (settings.paths(USER_DIR).gamedata / "Recipes.lua").exists():
             gd = gamedata.load_gamedata(settings.paths(USER_DIR).gamedata)

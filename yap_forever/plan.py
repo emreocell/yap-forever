@@ -25,7 +25,7 @@ def main() -> int:
     gamedata.fetch_all()
     gd = gamedata.load_gamedata()
     stock = load_stock(p.root / "stock.toml")
-    favor = load_favor()
+    favor = load_favor("Neutral")  # Task 5 passes the character's standing
     market = Market.load()
     route = plan(gd, Valuer(market, gd, stock), stock, favor, cap=stock.target, quests=load_quest_plans())
     v = verdict(route, stock)
