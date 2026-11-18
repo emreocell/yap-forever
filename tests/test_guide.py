@@ -149,3 +149,80 @@ class QuestItemNoteTests(unittest.TestCase):
         p = plan(gd, Valuer(toy.market(listings), gd, st), st, toy.NO_FAVOR, cap=60)
         text = render_guide(p, gd, toy.market(listings), st)
         self.assertIn("sell up to 20 on the AH (quest item), the rest to a vendor", text)
+
+
+LW = 165
+
+
+def lw_plan(spans, ranks, extra_events=()):
+    """A Leatherworking plan from (from, to) spans of one recipe and (skill, cap) trainings."""
+    from yap_forever.planner import Plan, Step
+    steps = [Step(LW, a, b, 10, "LW basic", b - a, 0, 0, {toy.COPPER_BAR: b - a}) for a, b in spans]
+    events = [f"Leatherworking {s}: train rank up to {cap} (4s 50c)" for s, cap in ranks] + list(extra_events)
+    return Plan(steps=steps, ranks=[(LW, s, cap, 450) for s, cap in ranks], events=events,
+                final_skill={LW: spans[-1][1]})
+
+
+def lw_gd():
+    return toy.gamedata(base_recipes() + [toy.recipe(10, "LW basic", LW, {toy.COPPER_BAR: 1})])
+
+
+class AnyProfessionGuideTests(unittest.TestCase):
+    def test_guide_title_for_one_profession(self):
+        p = lw_plan([(1, 40)], [])
+        text = render_guide(p, lw_gd(), toy.market(BARS), toy.stock(), caps={LW: 40})
+        self.assertEqual(text.splitlines()[0], "# Leatherworking to 40")
+        text = render_guide(p, lw_gd(), toy.market(BARS), toy.stock(), caps={LW: 40}, route="least gold")
+        self.assertEqual(text.splitlines()[0], "# Leatherworking to 40 — least gold route")
+
+    def test_guide_title_two_targets(self):
+        p = lw_plan([(1, 40)], [])
+        text = render_guide(p, lw_gd(), toy.market(BARS), toy.stock(), caps={197: 225, ENCH: 150})
+        self.assertEqual(text.splitlines()[0], "# Tailoring to 225 + Enchanting to 150")
+
+    def test_guide_stage_ends_at_training_skill(self):
+        p = lw_plan([(1, 62), (62, 140), (140, 160)], [(62, 150), (140, 225)])
+        text = render_guide(p, lw_gd(), toy.market(BARS), toy.stock(), caps={LW: 160})
+        for line in ("### Stage 1: to 75", "### Stage 2: to 150", "### Stage 3: to 225",
+                     "**Leatherworking 1–62**", "**Leatherworking 62–140**", "**Leatherworking 140–160**"):
+            self.assertIn(line, text)
+        self.assertNotIn("Skill 1–150", text)
+        stage1 = text[text.index("### Stage 1"):text.index("### Stage 2")]
+        self.assertIn("At 62: train rank up to 150", stage1)
+
+    def test_guide_stage_ends_at_cap_without_window_trip(self):
+        p = lw_plan([(1, 75), (75, 90)], [(75, 150)])
+        text = render_guide(p, lw_gd(), toy.market(BARS), toy.stock(), caps={LW: 90})
+        self.assertIn("**Leatherworking 1–75**", text)
+        self.assertIn("**Leatherworking 75–90**", text)
+
+    def test_guide_craft_once_row(self):
+        from yap_forever.planner import Plan, Step
+        rs = base_recipes() + [toy.recipe(5, "BS final", BS, {toy.IRON_BAR: 1}, req=20)]
+        p = Plan(steps=[Step(BS, 1, 20, 1, "BS basic", 19, 0, 0), Step(BS, 20, 20, 5, "BS final", 1, 700, 700,
+                                                                       {toy.IRON_BAR: 1})],
+                 final_skill={BS: 20})
+        text = render_guide(p, toy.gamedata(rs), toy.market(BARS), toy.stock(), caps={BS: 20})
+        self.assertIn("Craft BS final once", text)
+        self.assertNotIn("20–20", text)
+
+    def test_guide_shows_comparison(self):
+        p = lw_plan([(1, 40)], [])
+        text = render_guide(p, lw_gd(), toy.market(BARS), toy.stock(), caps={LW: 40}, comparison="| x | y |")
+        self.assertLess(text.index("| x | y |"), text.index("## Route"))
+
+    def test_guide_trip_notes(self):
+        from yap_forever.planner import Plan, Step
+        rs = base_recipes() + [toy.recipe(30, "BS scroll", BS, {toy.IRON_BAR: 1}, source="scroll", scroll=toy.SCROLL)]
+        gd = toy.gamedata(rs)
+        gd.vendor_prices[toy.SCROLL] = 500
+        p = Plan(steps=[Step(BS, 190, 230, 1, "BS basic", 40, 0, 0, {toy.COPPER_BAR: 40})],
+                 ranks=[(BS, 200, 300, 9000)], learn_log=[(BS, 195, 30, "vendor")],
+                 events=["Blacksmithing 200: train rank up to 300 (90s 0c)"], final_skill={BS: 230})
+        st = toy.stock(skills={BS: 190})
+        text = render_guide(p, gd, toy.market(BARS), st, caps={BS: 230}, alts={30: 3000})
+        rank = next(l for l in text.splitlines() if l.startswith("- **Trip:**") and "rank to 300" in l)
+        self.assertIn("set town", rank)
+        vendor = next(l for l in text.splitlines() if l.startswith("- **Trip:**") and "BS scroll" in l)
+        self.assertIn("buy every vendor pattern the route uses on one visit", vendor)
+        self.assertIn("or skip it: +30s", vendor)

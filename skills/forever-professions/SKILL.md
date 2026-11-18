@@ -16,8 +16,8 @@ player what changed, running the planner, and walking them through the result.
 - Find the Python command once per session: on Windows try `py -3`, otherwise `python3`, then
   `python`; keep the first whose `--version` says 3.11 or newer. Below it is written `<python>`.
 - Run `<python> -m yap_forever <command>`. Commands: `init`, `check [--offline]`,
-  `probe --item ID --buyout COPPER`, `prices`, `plan --character "FIRST LAST"` (Forever character
-  names are two words; quote them).
+  `probe --item ID --buyout COPPER`, `prices`, `plan --character "FIRST LAST" --prof NAME:TARGET [--prof NAME:TARGET]` (Forever
+  character names are two words; quote them; `TARGET` is a skill 1-300 or a recipe name).
 - The player's files are in `~/.yap-forever/` (or `$YAP_FOREVER_HOME`).
 - **Never open, print or ask for `credentials.json`.** The player pastes their API client ID and
   secret into it themselves. If they paste them into the chat, tell them to create a new secret
@@ -31,8 +31,16 @@ player what changed, running the planner, and walking them through the result.
    free bag slots, and what has piled up (greens to disenchant, leftover materials). Update their
    character's `stock.toml` with what they confirm, including the `[skills]` table: the plan
    starts from those skills.
+   **Ask the goal before every plan:** one profession or two, and for each a target: a milestone
+   (150, 225 or 300: the first time a profession reaches each on the account gives a legacy talent
+   point), another skill, or one recipe to reach and craft once (often a Merchant's Favor craft).
+   Save the answer under `[goals]` in `stock.toml` if the player wants it kept.
 3. **Refresh prices** with `prices`. Prices update about once an hour.
-4. **Run the planner** for what they asked: `plan --character NAME`.
+4. **Run the planner** for what they asked: `plan --character NAME --prof NAME:TARGET` (once per
+   profession). Show the comparison table it prints and explain the two routes in a sentence each:
+   **least gold** counts what the player owns as free; **least total value** counts owned
+   materials at what they'd sell for, so it may leave valuable ones to sell, which takes time on
+   the AH. When both are the same route, say so. Ask which guide they want to follow.
 5. **Walk through the result** top-down, craft by craft, as laid out in
    [references/list-layout.md](references/list-layout.md). When game data and play experience
    disagree, quote [references/game-rules.md](references/game-rules.md) and go with the rules.
@@ -40,8 +48,11 @@ player what changed, running the planner, and walking them through the result.
 
 ## What the planner covers today
 
-- Two professions at once (Blacksmithing and Enchanting by default) from a character's
-  `stock.toml`, to the `target` skill set there.
+- Any crafting profession, one or two at once, each to its own target (a skill up to 300 or one
+  recipe crafted once), from the character's `stock.toml`; two routes side by side.
+- The route in trainer stages; trips away from home (Artisan and Master trainers, vendor
+  patterns, the Favor vendor) are marked, with the cost of skipping a recipe trip. The planner
+  doesn't know where trainers and vendors are yet.
 - Merchant's Favor recipes for the character's standing (Alliance, Blacksmithing and
   Enchanting).
 - Shopping lists for other professions to 150 via `<python> -m yap_forever.scripts.four_profs`

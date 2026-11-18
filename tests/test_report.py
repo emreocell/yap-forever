@@ -115,3 +115,24 @@ class BufferTests(unittest.TestCase):
         for s in yellow:
             self.assertIn(f"| BS yellow | {math.ceil(s.crafts * 1.15 - 1e-6)} |", text)
         self.assertEqual(buffer_factor(1.0), 1.0)
+
+
+class AnyPairReportTests(unittest.TestCase):
+    def test_report_hides_switch_order_for_other_pairs(self):
+        from yap_forever.planner import Plan
+        p = Plan(final_skill={197: 40, 333: 40})
+        gd = toy.gamedata([])
+        text = render(p, "Ready to level", toy.market(), gd, toy.stock(), toy.NO_FAVOR, caps={197: 40, 333: 40})
+        self.assertEqual(text.splitlines()[0], "# Tailoring + Enchanting plan")
+        self.assertNotIn("## Switch order", text)
+        self.assertNotIn("## Farm before switching", text)
+
+    def test_report_keeps_switch_order_for_the_main_pair(self):
+        from yap_forever.planner import Plan
+        p = Plan(final_skill={164: 40, 333: 40})
+        text = render(p, "Switch now", toy.market(), toy.gamedata([]), toy.stock(), toy.NO_FAVOR)
+        self.assertIn("## Switch order", text)
+
+    def test_verdict_for_other_pairs(self):
+        from yap_forever.planner import Plan
+        self.assertEqual(verdict(Plan(), toy.stock(), caps={197: 40}), "Ready to level")

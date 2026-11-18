@@ -3,15 +3,22 @@ import math
 from collections import defaultdict
 
 from yap_forever.costmodel import Valuer, money
-from yap_forever.gamedata import ENCH, PROFESSIONS, QUESTIE_SHA, SKILLUP_SHA, WAGO_BUILD
+from yap_forever.gamedata import BS, ENCH, PROFESSIONS, QUESTIE_SHA, SKILLUP_SHA, WAGO_BUILD
 from yap_forever.planner import DISENCHANT, step_factor
 
 SECTIONS = ["Verdict", "Farm before switching", "Switch order", "Route", "Merchant's Favor",
             "Totals", "Sell now", "Excluded recipes", "Data notes"]
 
 
-def verdict(plan, stock) -> str:
+def _main_pair(caps) -> bool:
+    """The Blacksmithing + Enchanting switch with Mining that the farm and switch sections describe."""
+    return caps is None or set(caps) == {BS, ENCH}
+
+
+def verdict(plan, stock, caps=None) -> str:
     ore = sum(plan.farm.values())
+    if not _main_pair(caps) and ore == 0:
+        return "Ready to level"
     if ore == 0:
         return "Switch now"
     if ore <= stock.short_farm_ore:
@@ -23,9 +30,10 @@ def _q(item, gd):
     return " (quest item)" if item in gd.quest_items else ""
 
 
-def render(plan, verdict_text, market, gd, stock, favor) -> str:
+def render(plan, verdict_text, market, gd, stock, favor, caps=None) -> str:
     v = Valuer(market, gd, stock)
-    out: list[str] = ["# Blacksmithing + Enchanting plan", ""]
+    names = " + ".join(PROFESSIONS.get(x, str(x)) for x in (caps or (BS, ENCH)))
+    out: list[str] = [f"# {names} plan", ""]
 
     def section(name):
         out.extend(["", f"## {name}", ""])
@@ -42,18 +50,30 @@ def render(plan, verdict_text, market, gd, stock, favor) -> str:
     out.append(f"Planned to: {final}.")
 
     # Farm
-    section("Farm before switching")
+    if _main_pair(caps) or plan.farm:
+        section("Farm before switching")
     if plan.farm:
         out += ["| Ore | Count |", "|---|---|"]
         out += [f"| {gd.name(i)} | {n} |" for i, n in sorted(plan.farm.items())]
         bars = ", ".join(f"{math.ceil(n)} {gd.name(b)}" for b, n in sorted(plan.farmed_bars.items()))
         out += ["", f"Smelts into: {bars}."]
-    else:
+    elif _main_pair(caps):
         out.append("Nothing: your stock and purchases cover the route.")
 
     # Switch order
-    section("Switch order")
     held_total = sum(n for n in plan.de_materials.values())
+    if not _main_pair(caps):
+        if held_total:
+            out.append(f"Disenchanting in this route yields about {held_total:.0f} materials.")
+    else:
+        _switch_order(out, section, held_total)
+
+    _rest(out, section, plan, v, market, gd, stock, favor)
+    return "\n".join(out).replace("\n\n\n", "\n\n") + "\n"
+
+
+def _switch_order(out, section, held_total) -> None:
+    section("Switch order")
     out.append("Farming time is free, so both orders cost the same gold.")
     out.append("- **Order A:** drop Skinning and take Blacksmithing now, keep Mining while levelling "
                "Blacksmithing (mine the list above as you go), then swap Mining for Enchanting. "
@@ -64,6 +84,8 @@ def render(plan, verdict_text, market, gd, stock, favor) -> str:
     if held_total:
         out.append(f"Disenchanting in this route yields about {held_total:.0f} materials.")
 
+
+def _rest(out, section, plan, v, market, gd, stock, favor) -> None:
     # Route
     section("Route")
     out += ["| Profession | Skill | Craft | Crafts | Cash | Net cost |", "|---|---|---|---|---|---|"]
@@ -196,4 +218,3 @@ def render(plan, verdict_text, market, gd, stock, favor) -> str:
     out.append("- Disenchant results use Classic odds (estimates). Favor data is from community guides.")
     out.append("- AH resale of crafted gear counts at most 5 of each item, except quest items.")
     out.append("- Leather is not farmed in this model; any leather is bought.")
-    return "\n".join(out).replace("\n\n\n", "\n\n") + "\n"
