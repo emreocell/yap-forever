@@ -43,9 +43,9 @@ def gamedata(recipes, quest_items=()):
                     item_tool_category={HAMMER: 162, ROD_TOOL: 373})
 
 
-def stock(items=None, favor=0, mining=0, level=60):
+def stock(items=None, favor=0, mining=0, level=60, skills=None):
     return Stock(items=items or {}, favor=favor, cash=120000, level=level, mining=mining,
-                 short_farm_ore=200, marker=None)
+                 short_farm_ore=200, marker=None, skills=skills or {})
 
 
 def market(listings=None):

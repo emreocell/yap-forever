@@ -54,6 +54,17 @@ class PlannerTests(unittest.TestCase):
         first_iron = min(s.skill_from for s in p.steps if s.spell_id == 3)
         self.assertEqual(first_iron, 30)
 
+    def test_plan_starts_from_stock_skills(self):
+        p = run(base_recipes(), BARS, stock=toy.stock(skills={BS: 100, ENCH: 120}))
+        self.assertEqual(min(s.skill_from for s in p.steps if s.profession == BS), 100)
+        self.assertEqual(min(s.skill_from for s in p.steps if s.profession == ENCH), 120)
+        self.assertEqual(p.fees, 4500 + 5000)  # the 150 ranks are already trained
+
+    def test_skill_at_rank_cap_trains_next_rank(self):
+        p = run(base_recipes(), BARS, stock=toy.stock(skills={BS: 150, ENCH: 150}))
+        self.assertEqual(p.fees, 4500 + 5000)
+        self.assertEqual(p.final_skill, {BS: 225, ENCH: 225})
+
     def test_rank_fee_added_at_cap(self):
         p = run(base_recipes(), BARS)
         self.assertEqual(p.fees, 450 + 4500 + 500 + 5000)

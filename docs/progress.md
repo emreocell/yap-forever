@@ -15,3 +15,4 @@ One line per finished task. Plans are private to the owner; tasks are named by p
 | 2026-11-18 | 1.9 | Final review fixes: network failures give a next step instead of a traceback; output escapes characters a Windows console code page cannot show; neutral house numbers in tests and a pattern-capable private denylist | #9 |
 | 2026-11-18 | 1.10 | Two-word Forever character names: quoted TOML keys in `migrate`, the profile template and the setup guide | #10 |
 | 2026-11-18 | 1.11 | Commit identity check (noreply after a baseline), stacked-PR rule in `AGENTS.md`, CI with full history and read-only permissions, setup record updated | #11 |
+| 2026-11-18 | 1.12 | Plans start from the character's current skills (`[skills]` in `stock.toml`) and ranks already trained (independent review, finding 2) | #12 |

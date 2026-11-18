@@ -76,8 +76,10 @@ def plan(gd, valuer, stock, favor, cap: int = 225, quests: dict | None = None,
             recipes[spell] = dataclasses.replace(recipes[spell], source="quest")
     pools = Pools.from_stock(stock)
     p = Plan()
-    skill = {BS: 1, ENCH: 1}
-    rank_cap = {BS: START_CAP, ENCH: START_CAP}
+    skill = {x: max(1, stock.skills.get(x, 1)) for x in (BS, ENCH)}
+    # Ranks up to the current skill are already trained; at exactly a cap the next one is not.
+    rank_cap = {x: min([c for c in [START_CAP] + [r.cap for r in gd.trainer_ranks.get(x, [])]
+                        if c >= skill[x]], default=START_CAP) for x in (BS, ENCH)}
     learned: set[int] = set()
     produced: dict[int, float] = {}
     held: dict[int, float] = {}
