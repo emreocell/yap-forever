@@ -181,6 +181,42 @@ class PlannerTests(unittest.TestCase):
         self.assertGreaterEqual(p.economic_total, p.cash_total - p.sale_proceeds - p.leftover_value)
 
 
+
+class BankGreensTests(unittest.TestCase):
+    """Greens in the bank are disenchanted first: free Enchanting skill-ups and materials."""
+
+    def recipes(self):
+        return [toy.recipe(1, "BS basic", BS, {toy.COPPER_BAR: 1}, (toy.STONE, 1)),
+                toy.recipe(2, "Ench dust", ENCH, {toy.DUST: 1})]
+
+    def run_bank(self, belts=30, skills=None, cap=40):
+        st = toy.stock({toy.BELT: belts}, skills=skills)
+        return run(self.recipes(), {**BARS, toy.DUST: [(300, 100000)], toy.BELT: [(5000, 10)]},
+                   stock=st, cap=cap), st
+
+    def test_bank_greens_level_enchanting_first(self):
+        p, _ = self.run_bank()
+        first = next(s for s in p.steps if s.profession == ENCH)
+        self.assertEqual((first.spell_id, first.skill_from), (0, 1))
+        self.assertGreater(first.skill_to, 20)
+        self.assertEqual(first.materials, {toy.BELT: 30})
+        self.assertEqual(first.from_stock, {toy.BELT: 30})
+        self.assertEqual(p.used_stock.get(toy.BELT), 30)
+        self.assertIn("Enchanting 1: disenchant 30 Runed Copper Belt from your bank", p.events)
+
+    def test_bank_greens_are_free_and_feed_enchanting(self):
+        p, _ = self.run_bank()
+        de = [s for s in p.steps if s.spell_id == 0]
+        self.assertEqual(sum(s.cash + s.economic for s in de), 0)
+        self.assertGreater(p.de_materials.get(toy.DUST, 0), 0)
+        self.assertTrue(any(toy.DUST in s.used_made for s in p.steps if s.spell_id == 2))
+        self.assertNotIn(toy.BELT, p.leftovers)
+
+    def test_bank_greens_untouched_when_enchanting_not_planned(self):
+        p, _ = self.run_bank(skills={ENCH: 40})
+        self.assertNotIn(toy.BELT, p.used_stock)
+        self.assertFalse(any(s.spell_id == 0 for s in p.steps))
+
 if __name__ == "__main__":
     unittest.main()
 
