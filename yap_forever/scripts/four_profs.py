@@ -57,70 +57,7 @@ stock =config.Stock(items={int(k): int(v) for k, v in BAGS.get("items", {}).item
 favor = types.SimpleNamespace(recipes={}, skills={})
 
 
-class CraftOrBuy(costmodel.Valuer):
-    """Like Valuer, but crafts an intermediate when that is cheaper than buying it."""
-
-    def _take(self, item, qty, pools, skills, move, depth, learned):
-        log = []
-
-        def tmove(d, k, delta):
-            d[k] = d.get(k, 0) + delta
-            log.append((d, k, delta))
-
-        def undo():
-            for d, k, delta in reversed(log):
-                d[k] -= delta
-                if abs(d[k]) < 1e-9:
-                    del d[k]
-            log.clear()
-
-        # own crafts and bank first, as in Valuer; then craft or buy the rest, whichever is cheaper
-        cost, need = costmodel.Cost(), qty
-        for pool, made in ((pools.made, True), (pools.stock, False)):
-            n = min(pool.get(item, 0), need)
-            if n > 1e-9:
-                move(pool, item, -n)
-                v = self.owned_value(item)
-                cost = cost + costmodel.Cost(0, 0 if made else n * v, n * v)
-                need -= n
-        if need <= 1e-9:
-            return cost
-        a = super()._take(item, need, pools, skills, tmove, depth, learned)
-        undo()
-        b = None
-        if depth < 2:
-            b = self._craft(item, need, pools, skills, tmove, depth, learned)
-            undo()
-        if b is not None and (a is None or b.economic < a.economic - 1e-9):
-            rest = self._craft(item, need, pools, skills, move, depth, learned)
-        else:
-            rest = super()._take(item, need, pools, skills, move, depth, learned)
-        return None if rest is None else cost + rest
-
-    def _craft(self, item, need, pools, skills, move, depth, learned):
-        held = set(pools.tools) | {i for i, n in pools.made.items() if n >= 1}
-        for r in self.gd.recipes.values():
-            if not r.output or r.output[0] != item:
-                continue
-            if r.source != "starter" and r.spell_id not in learned:
-                continue
-            if skills.get(r.skill_line, 0) < r.required_skill:
-                continue
-            if any(not any(self.gd.satisfies(t, cat) for t in held) for cat in r.tools):
-                continue
-            crafts = need / r.output[1]
-            sub = costmodel.Cost()
-            for reagent, q in r.reagents.items():
-                c = self._take(reagent, q * crafts, pools, skills, move, depth + 1, learned)
-                if c is None:
-                    return None
-                sub = sub + c
-            move(pools.crafted, item, need)
-            return sub
-        return None
-
-
-valuer = CraftOrBuy(market, gd, stock)
+valuer = costmodel.Valuer(market, gd, stock)  # crafts intermediates when cheaper by the margin
 QUALITY = {r["ID"]: int(r["OverallQualityID"] or 0) for r in csv.DictReader(open(settings.paths().gamedata / "ItemSparse.csv", encoding="utf-8", newline=""))}
 out = {"snapshot": market.snapshot_time, "profs": {}, "stock": {str(k): v for k, v in stock.items.items()}}
 for prof, pname in PROFS.items():

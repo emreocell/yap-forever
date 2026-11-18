@@ -397,7 +397,7 @@ def plan(gd, valuer, stock, favor, cap: int = 225, quests: dict | None = None,
                 continue
             # Only outputs the route reuses (disenchanted for Enchanting) lower the score. Resale is
             # counted in the totals but must not pull in extra, lower-chance crafts.
-            out_val = 0
+            out_val = reuse_val = 0
             if r.output:
                 de = valuer.output_options(r.output[0], produced.get(r.output[0], 0)).get("de", 0) if has_ench else 0
                 out_val = de * r.output[1] * crafts
@@ -405,10 +405,15 @@ def plan(gd, valuer, stock, favor, cap: int = 225, quests: dict | None = None,
                 if r.output[0] in reuse:
                     need, unit = reuse[r.output[0]]
                     left = max(0.0, need - produced.get(r.output[0], 0))
-                    out_val += unit * min(r.output[1] * crafts, left)
+                    reuse_val = unit * min(r.output[1] * crafts, left)
+                    out_val += reuse_val
             one_time = lo[0].economic + sum(t["cost"].economic for t in tools)
             score = c.score - out_val + one_time / usable
-            key = (score, r.spell_id)
+            if valuer.mode == "gold":  # gold spent first; among equal gold, the lower total value
+                one_cash = lo[0].cash + sum(t["cost"].cash for t in tools)
+                key = (round(c.cash + one_cash / usable - reuse_val, 2), score, r.spell_id)
+            else:
+                key = (score, r.spell_id)
             if best is None or key < best[0]:
                 best = (key, r, crafts, lo, tools, requests)
 
