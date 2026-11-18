@@ -67,6 +67,7 @@ class CredentialTests(unittest.TestCase):
         self.assertNotIn("myclientid", repr(c))
         self.assertNotIn("s3cr3tvalue", str(c))
 
+    @unittest.skipIf(os.name == "nt", "file modes are POSIX only")
     def test_credentials_refuses_open_permissions(self):
         with tempfile.TemporaryDirectory() as d:
             p = write(d, "config.json",

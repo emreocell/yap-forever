@@ -1,0 +1,30 @@
+# yap-forever
+
+> Claude Code plugin for WoW: Forever players: the cheapest profession levelling routes and
+> shopping lists from the player's own auction house prices. Python 3.11+ standard library.
+
+## Start here
+
+- [README.md](README.md): what it does, install, privacy, command line
+- [AGENTS.md](AGENTS.md): rules for agents working on this repository
+- [HANDOFF.md](HANDOFF.md): state of the project for people picking it up
+- [docs/project-setup.md](docs/project-setup.md): working agreements (branches, CI, tags, reviews)
+- [docs/progress.md](docs/progress.md): finished tasks, one line each
+
+## The skill
+
+- [skills/forever-professions/SKILL.md](skills/forever-professions/SKILL.md): workflow for Claude
+- [references/setup.md](skills/forever-professions/references/setup.md): first-time setup
+- [references/list-layout.md](skills/forever-professions/references/list-layout.md): how routes are written
+- [references/game-rules.md](skills/forever-professions/references/game-rules.md): Forever rules learned in play
+
+## Code
+
+- `yap_forever/cli.py`: commands `init`, `check`, `probe`, `prices`, `plan`, `migrate`
+- `yap_forever/settings.py`: the player's home folder and paths; credentials loader
+- `yap_forever/profile.py`: profile (region, ruleset, faction, characters), auction house file
+- `yap_forever/planner.py`, `costmodel.py`: route search and costs
+- `yap_forever/gamedata.py`: pinned game data sources (see [CREDITS.md](CREDITS.md))
+- `yap_forever/report.py`, `guide.py`: report and guide rendering
+- `yap_forever/scripts/`: shopping lists for other professions (to be merged into `plan`)
+- `tests/`: `python3 -m unittest discover -s tests -t .`

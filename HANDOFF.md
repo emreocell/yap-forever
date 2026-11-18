@@ -1,0 +1,26 @@
+# Handoff
+
+State on 2026-11-18, end of phase 1 work (public skeleton). Phases 2–5 are planned by the owner.
+
+## What works
+
+- The planner from the owner's personal project, moved into `yap_forever/` unchanged in
+  behaviour: the owner's main route and an alt shopping list reproduce line for line.
+- Per-player home folder `~/.yap-forever/` (`YAP_FOREVER_HOME` overrides), one command line,
+  setup checks with next steps, any region and ruleset in principle (only EU tried).
+- Claude Code plugin with the `forever-professions` skill; loads with `--plugin-dir`.
+
+## Not done yet
+
+- Two professions at once are still Blacksmithing + Enchanting; other professions go through
+  `yap_forever/scripts/` (fixed target 150).
+- No trainer stops on route rows, no legacy talents, Alliance trainer locations only, no gear.
+- No price import for players whose network can't reach the Blizzard API.
+- Only EU has been seen to serve Forever auction data.
+
+## How to work on it
+
+Read [AGENTS.md](AGENTS.md) and [docs/project-setup.md](docs/project-setup.md) first: task
+branches, pull requests, CI green before merge, tags `vX.Y.Z-<slice>`. Run the tests with
+`python3 -m unittest discover -s tests -t .` (`py -3` on Windows). Keep a `.private-denylist`
+(untracked) with anything personal; `tests/test_publishable.py` checks every tracked file.
