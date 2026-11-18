@@ -1,6 +1,6 @@
 # Handoff
 
-State on 2026-11-18, end of phase 1 work (public skeleton). Phases 2–5 are planned by the owner.
+State on 2026-11-18, end of phase 1 work (first public planner, tag `v0.1.0-planner`). Phases 2–5 are planned by the owner.
 
 ## What works
 
@@ -9,6 +9,9 @@ State on 2026-11-18, end of phase 1 work (public skeleton). Phases 2–5 are pla
 - Per-player home folder `~/.yap-forever/` (`YAP_FOREVER_HOME` overrides), one command line,
   setup checks with next steps, any region and ruleset in principle (only EU tried).
 - Claude Code plugin with the `forever-professions` skill; loads with `--plugin-dir`.
+- An independent review (2026-11-18) found ten issues; all are fixed (PRs 15–22): bank metal and
+  current skills are used, a 15% buffer on yellow and green steps, prices tied to their house,
+  Forever disenchanting, quest levels, realistic sales, damaged files, `migrate` flags.
 
 ## Not done yet
 
