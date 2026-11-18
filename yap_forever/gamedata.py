@@ -8,12 +8,11 @@ import urllib.request
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from yap_forever.config import DATA_DIR, USER_DIR
+from yap_forever import settings
 from yap_forever.lualit import extract_table, parse
 
 BS, ENCH = 164, 333
 PROFESSIONS = {BS: "Blacksmithing", ENCH: "Enchanting"}
-GD_DIR = DATA_DIR / "gamedata"
 
 SKILLUP_SHA = "77337fa60453304ab0ae656466807037802435bc"
 QUESTIE_SHA = "ae4404b01a45163d3ef05909395b29aafc437bc2"
@@ -87,7 +86,8 @@ class GameData:
         return i.name if i else f"item {item_id}"
 
 
-def fetch_all(force: bool = False, dest: Path = GD_DIR) -> None:
+def fetch_all(force: bool = False, dest: Path | None = None) -> None:
+    dest = Path(dest) if dest is not None else settings.paths().gamedata
     dest.mkdir(parents=True, exist_ok=True)
     for name, url in SOURCES.items():
         p = dest / name
@@ -134,8 +134,8 @@ def _quest_items(quests: dict) -> set[int]:
     return items
 
 
-def load_gamedata(d: Path = GD_DIR) -> GameData:
-    d = Path(d)
+def load_gamedata(d: Path | None = None) -> GameData:
+    d = Path(d) if d is not None else settings.paths().gamedata
     recipes_src = (d / "Recipes.lua").read_text(encoding="utf-8")
     data = parse(extract_table(recipes_src, "RecipeData"))
     scrolls = parse(extract_table(recipes_src, "RecipeScrolls"))
@@ -232,9 +232,9 @@ def checks_report(gd: GameData, cap: int = 225) -> str:
 def main(argv: list[str]) -> int:
     fetch_all(force="--fetch" in argv)
     if "--checks" in argv:
-        out = USER_DIR / "reports" / "data-checks.md"
+        out = settings.paths().reports / "data-checks.md"
         out.parent.mkdir(parents=True, exist_ok=True)
-        out.write_text(checks_report(load_gamedata()))
+        out.write_text(checks_report(load_gamedata()), encoding="utf-8")
         print(f"wrote {out}")
     return 0
 

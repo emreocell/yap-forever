@@ -6,7 +6,7 @@ from pathlib import Path
 from yap_forever.prices import Market
 
 BUFFER = 1.15  # extra on yellow/green steps (crafts are expected values)
-d = json.load(open(sys.argv[1]))
+d = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
 N = d["names"]
 market = Market.load()
 VP = d["vendor_price"]
@@ -296,5 +296,5 @@ if left:
     w("")
     w("Left in your bags: " + ", ".join(f"{n} {name}" for name, n in left.items()) + ".")
 lines[lines.index("SUMMARY_PLACEHOLDER")] = "\n".join(table)
-Path(sys.argv[2]).write_text("\n".join(lines) + "\n")
+Path(sys.argv[2]).write_text("\n".join(lines) + "\n", encoding="utf-8")
 print("\n".join(lines))

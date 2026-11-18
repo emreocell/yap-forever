@@ -13,7 +13,8 @@ import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
 
-from yap_forever.config import DATA_DIR, Credentials
+from yap_forever import settings
+from yap_forever.config import Credentials
 
 TOKEN_URL = "https://oauth.battle.net/token"
 NAMESPACE = "dynamic-forever-eu"
@@ -44,17 +45,17 @@ class Response:
 
 class Client:
     def __init__(self, creds: Credentials, opener=urllib.request.urlopen, now=time.time,
-                 token_cache: Path = DATA_DIR / "token.json"):
+                 token_cache: Path | None = None):
         self.creds = creds
         self.opener = opener
         self.now = now
-        self.token_cache = Path(token_cache)
+        self.token_cache = Path(token_cache) if token_cache is not None else settings.paths().token
         self.host = f"https://{creds.region}.api.blizzard.com"
 
     # --- token -------------------------------------------------------------
     def _cached_token(self) -> str | None:
         try:
-            d = json.loads(self.token_cache.read_text())
+            d = json.loads(self.token_cache.read_text(encoding="utf-8"))
         except (OSError, ValueError):
             return None
         if d.get("expires_at", 0) - 60 > self.now():

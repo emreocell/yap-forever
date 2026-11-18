@@ -3,11 +3,12 @@ import unittest
 
 from yap_forever import disenchant as de
 from yap_forever import gamedata
-from yap_forever.config import DATA_DIR, STATIC_DIR
+from yap_forever import settings
+from yap_forever.config import STATIC_DIR
 from yap_forever.gamedata import ItemInfo
 from yap_forever.prices import Market
 
-REAL = DATA_DIR / "gamedata"
+REAL = settings.paths(settings.home({})).gamedata  # the player's real cache, not the test home
 
 
 def item(ilvl, cls=4, quality=2):

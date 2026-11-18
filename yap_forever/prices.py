@@ -7,9 +7,9 @@ import sys
 from pathlib import Path
 
 from yap_forever import bnet
-from yap_forever.config import DATA_DIR, load_credentials
+from yap_forever import settings
+from yap_forever.settings import load_credentials
 
-PRICES_PATH = DATA_DIR / "prices.json"
 AH_CUT = 0.05
 
 
@@ -55,27 +55,30 @@ class Market:
     def depth(self, item_id: int) -> int:
         return sum(n for _, n in self.listings.get(item_id, []))
 
-    def save(self, path: Path = PRICES_PATH) -> None:
-        Path(path).parent.mkdir(parents=True, exist_ok=True)
+    def save(self, path: Path | None = None) -> None:
+        path = Path(path) if path is not None else settings.paths().prices
+        path.parent.mkdir(parents=True, exist_ok=True)
         data = {"snapshot_time": self.snapshot_time,
                 "listings": {str(i): v for i, v in self.listings.items()}}
-        Path(path).write_text(json.dumps(data))
+        path.write_text(json.dumps(data), encoding="utf-8")
 
     @classmethod
-    def load(cls, path: Path = PRICES_PATH) -> "Market":
-        d = json.loads(Path(path).read_text())
+    def load(cls, path: Path | None = None) -> "Market":
+        path = Path(path) if path is not None else settings.paths().prices
+        d = json.loads(path.read_text(encoding="utf-8"))
         return cls({int(i): [tuple(x) for x in v] for i, v in d["listings"].items()},
                    d.get("snapshot_time", ""))
 
 
 def main() -> int:
-    house_file = DATA_DIR / "house.json"
+    p = settings.paths()
+    house_file = p.house
     if not house_file.exists():
         print("No house yet: run probe.py with a marker listing first.")
         return 1
-    house = json.loads(house_file.read_text())["house"]
+    house = json.loads(house_file.read_text(encoding="utf-8"))["house"]
     since = None
-    if PRICES_PATH.exists():
+    if p.prices.exists():
         since = Market.load().snapshot_time or None
     try:
         client = bnet.Client(load_credentials())
@@ -92,7 +95,7 @@ def main() -> int:
         return 1
     m = Market.from_snapshot(r.body or {}, comm, r.last_modified or "")
     m.save()
-    with open(DATA_DIR / "snapshots.log", "a") as f:
+    with open(p.cache / "snapshots.log", "a", encoding="utf-8") as f:
         f.write(f"{r.last_modified}\n")
     print(f"Saved {len(m.listings)} items from house {house}, snapshot {r.last_modified}.")
     return 0

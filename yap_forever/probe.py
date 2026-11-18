@@ -7,7 +7,9 @@ import sys
 from datetime import datetime, timezone
 
 from yap_forever import bnet
-from yap_forever.config import DATA_DIR, load_credentials, load_stock
+from yap_forever import settings
+from yap_forever.config import load_stock
+from yap_forever.settings import load_credentials
 
 
 def main(argv: list[str]) -> int:
@@ -27,7 +29,7 @@ def main(argv: list[str]) -> int:
     try:
         idx = client.get(f"/data/wow/ruleset/{bnet.RULESET}/auctions/index").body or {}
         print("houses in index:", ", ".join(str(h.get("id")) for h in idx.get("auctions", [])))
-        stock = load_stock()
+        stock = load_stock(settings.paths().root / "stock.toml")
         if not stock.marker:
             print("Set [marker] item_id and buyout_copper in stock.toml first.")
             return 1
@@ -50,10 +52,12 @@ def main(argv: list[str]) -> int:
         print(f"marker found in {len(matches)} houses ({matches}); the snapshot may not include it yet. "
               "Try again later or pick a more unusual buyout.")
         return 1
-    DATA_DIR.mkdir(exist_ok=True)
-    (DATA_DIR / "house.json").write_text(json.dumps(
-        {"house": matches[0], "found": datetime.now(timezone.utc).isoformat(timespec="seconds")}))
-    print(f"Your auction house is {matches[0]} (saved to data/house.json).")
+    house_file = settings.paths().house
+    house_file.parent.mkdir(parents=True, exist_ok=True)
+    house_file.write_text(json.dumps(
+        {"house": matches[0], "found": datetime.now(timezone.utc).isoformat(timespec="seconds")}),
+        encoding="utf-8")
+    print(f"Your auction house is {matches[0]} (saved to {house_file}).")
     return 0
 
 

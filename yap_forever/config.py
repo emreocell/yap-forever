@@ -1,16 +1,9 @@
-"""Paths, credentials and the user's stock file."""
-import json
-import os
-import stat
+"""Credentials type, static data folder and the stock file."""
 import tomllib
 from dataclasses import dataclass, field
 from pathlib import Path
 
-APP_DIR = Path(__file__).resolve().parent
-DATA_DIR = APP_DIR / "data"
-STATIC_DIR = APP_DIR / "data_static"
-USER_DIR = Path.home() / ".yap-forever"
-CONFIG_PATH = APP_DIR / "config.json"
+STATIC_DIR = Path(__file__).resolve().parent / "data_static"
 
 
 @dataclass(frozen=True)
@@ -23,18 +16,6 @@ class Credentials:
         return f"Credentials(region={self.region!r}, client_id=***, client_secret=***)"
 
     __str__ = __repr__
-
-
-def load_credentials(path: Path = CONFIG_PATH) -> Credentials:
-    path = Path(path)
-    mode = stat.S_IMODE(os.stat(path).st_mode)
-    if mode & 0o077:
-        raise PermissionError(f"{path.name} must be readable only by you: run chmod 600 on it")
-    data = json.loads(path.read_text())
-    cid, secret = data.get("client_id", ""), data.get("client_secret", "")
-    if not cid or not secret:
-        raise ValueError("fill in client_id and client_secret in config.json")
-    return Credentials(cid, secret, data.get("region", "eu"))
 
 
 @dataclass
@@ -51,7 +32,7 @@ class Stock:
     quest_item_sales: int | None = None  # quest items you expect to sell on the AH; None = no limit
 
 
-def load_stock(path: Path = USER_DIR / "stock.toml") -> Stock:
+def load_stock(path: Path) -> Stock:
     with open(path, "rb") as f:
         d = tomllib.load(f)
     m = d.get("marker", {})

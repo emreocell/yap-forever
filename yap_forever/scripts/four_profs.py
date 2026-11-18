@@ -6,7 +6,7 @@ empty bank, no farming, no Favor/quests. Craft vs buy is compared for intermedia
 import csv, json, math, sys, tomllib, types
 from pathlib import Path
 
-from yap_forever import gamedata, planner, costmodel, config
+from yap_forever import gamedata, planner, costmodel, config, settings
 from yap_forever.prices import Market
 
 PROFS = {165: "Leatherworking", 197: "Tailoring", 171: "Alchemy", 202: "Engineering"}
@@ -20,7 +20,7 @@ planner.de_yield = costmodel.de_yield = lambda _info: {}
 
 gamedata.PROFESSIONS = {**PROFS, DUMMY: "none"}
 gd = gamedata.load_gamedata()
-starters = {int(r["Spell"]) for r in csv.DictReader(open(gamedata.GD_DIR / "SkillLineAbility.csv"))
+starters = {int(r["Spell"]) for r in csv.DictReader(open(settings.paths().gamedata / "SkillLineAbility.csv", encoding="utf-8", newline=""))
             if int(r["SkillLine"]) in PROFS and r["AcquireMethod"] == "1"}
 for s, r in list(gd.recipes.items()):
     if r.source == "unknown" and s in starters:
@@ -121,7 +121,7 @@ class CraftOrBuy(costmodel.Valuer):
 
 
 valuer = CraftOrBuy(market, gd, stock)
-QUALITY = {r["ID"]: int(r["OverallQualityID"] or 0) for r in csv.DictReader(open(gamedata.GD_DIR / "ItemSparse.csv"))}
+QUALITY = {r["ID"]: int(r["OverallQualityID"] or 0) for r in csv.DictReader(open(settings.paths().gamedata / "ItemSparse.csv", encoding="utf-8", newline=""))}
 out = {"snapshot": market.snapshot_time, "profs": {}, "stock": {str(k): v for k, v in stock.items.items()}}
 for prof, pname in PROFS.items():
     planner.BS, planner.ENCH = prof, DUMMY
@@ -204,11 +204,11 @@ for pr in out["profs"].values():
         if st["output"]:
             names[st["output"][0]] = gd.name(int(st["output"][0]))
 out["names"] = names
-stackable = {r["ID"]: int(r["Stackable"] or 1) for r in csv.DictReader(open(gamedata.GD_DIR / "ItemSparse.csv"))}
+stackable = {r["ID"]: int(r["Stackable"] or 1) for r in csv.DictReader(open(settings.paths().gamedata / "ItemSparse.csv", encoding="utf-8", newline=""))}
 out["stack"] = {k: max(1, stackable.get(k, 1)) for k in names}
 out["quality"] = {k: QUALITY.get(k, 0) for k in names}
 out["bag_slots"] = BAGS.get("bag_slots")  # free slots while crafting; None = not planned
 out["vendor_price"] = {k: gd.vendor_prices.get(int(k)) for k in names}
 out["depth"] = {k: market.depth(int(k)) for k in names}
 out["min_price"] = {k: market.min_price(int(k)) for k in names}
-Path(sys.argv[1]).write_text(json.dumps(out, indent=1))
+Path(sys.argv[1]).write_text(json.dumps(out, indent=1), encoding="utf-8")
