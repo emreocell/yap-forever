@@ -57,7 +57,8 @@ def render(plan, verdict_text, market, gd, stock, favor) -> str:
     out.append("Farming time is free, so both orders cost the same gold.")
     out.append("- **Order A:** drop Skinning and take Blacksmithing now, keep Mining while levelling "
                "Blacksmithing (mine the list above as you go), then swap Mining for Enchanting. "
-               "Green crafts meant for disenchanting wait in the bank or mail until Enchanting catches up.")
+               "Greens already in your bank that Enchanting can disenchant are disenchanted first; "
+               "a green craft is only kept for disenchanting once Enchanting can disenchant it.")
     out.append("- **Order B:** farm the list first, then switch both. Both professions level side by side, "
                "so greens are disenchanted as soon as Enchanting allows.")
     if held_total:
