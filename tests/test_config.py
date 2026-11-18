@@ -72,6 +72,34 @@ class SkillsTests(unittest.TestCase):
                 config.load_stock(write(d, "stock.toml", STOCK + "\n[skills]\nbasketweaving = 10\n"))
 
 
+class GoalsTests(unittest.TestCase):
+    def test_parse_prof_arg_skill_and_recipe(self):
+        self.assertEqual(config.parse_prof_arg("Tailoring:225"), (197, config.Goal(skill=225)))
+        self.assertEqual(config.parse_prof_arg("enchanting:Enchant Bracer - Minor Health"),
+                         (333, config.Goal(recipe="Enchant Bracer - Minor Health")))
+        # above 300 a number is a recipe's spell ID, not a skill
+        self.assertEqual(config.parse_prof_arg("blacksmithing:2662"), (164, config.Goal(recipe="2662")))
+
+    def test_parse_goal_number_is_skill(self):
+        self.assertEqual(config.parse_goal(150), config.Goal(skill=150))
+        self.assertEqual(config.parse_goal("300"), config.Goal(skill=300))
+        self.assertEqual(config.parse_goal("Veteran's Chain Belt"), config.Goal(recipe="Veteran's Chain Belt"))
+
+    def test_parse_prof_arg_errors(self):
+        for bad in ("tailoring", "cooking:150", "tailoring:0", "tailoring:-5", "tailoring:"):
+            with self.subTest(bad=bad), self.assertRaises(ValueError):
+                config.parse_prof_arg(bad)
+
+    def test_stock_goals_and_bag_slots(self):
+        with tempfile.TemporaryDirectory() as d:
+            s = config.load_stock(write(d, "stock.toml", "bag_slots = 40\n" + STOCK
+                                        + '\n[goals]\ntailoring = 225\nenchanting = "Enchant X"\n'))
+            plain = config.load_stock(write(d, "plain.toml", STOCK))
+        self.assertEqual(s.goals, {197: config.Goal(skill=225), 333: config.Goal(recipe="Enchant X")})
+        self.assertEqual(s.bag_slots, 40)
+        self.assertEqual((plain.goals, plain.bag_slots), ({}, None))
+
+
 class CredentialTests(unittest.TestCase):
     def test_credentials_repr_masks(self):
         c = config.Credentials("myclientid", "s3cr3tvalue", "eu")
