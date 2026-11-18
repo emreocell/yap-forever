@@ -149,6 +149,21 @@ def cmd_plan(paths: Paths, character: str) -> int:
     return 0
 
 
+def cmd_migrate(paths: Paths, args) -> int:
+    from yap_forever.migrate import migrate
+    alts = {}
+    for a in args.alt:
+        name, sep, bags = a.partition("=")
+        if not sep:
+            print(f"--alt needs NAME=BAGSFILE, got {a!r}")
+            return 1
+        alts[name] = Path(bags).expanduser()
+    for line in migrate(args.from_user.expanduser(), args.from_data.expanduser(), paths, args.main, alts):
+        print(line)
+    print(f"Copy your API client into {paths.credentials} yourself, then run {command_hint('check')}")
+    return 0
+
+
 def main(argv: list[str], paths: Paths | None = None) -> int:
     parser = argparse.ArgumentParser(prog="yap_forever", description="WoW: Forever profession planner")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -161,6 +176,11 @@ def main(argv: list[str], paths: Paths | None = None) -> int:
     sub.add_parser("prices", help="download your auction house's prices")
     pl = sub.add_parser("plan", help="plan a character's professions")
     pl.add_argument("--character", required=True)
+    m = sub.add_parser("migrate", help="move a pre-yap-forever planner folder into your home folder")
+    m.add_argument("--from-user", type=Path, required=True, help="folder with stock.toml and bags files")
+    m.add_argument("--from-data", type=Path, required=True, help="old data folder (house, prices, game data)")
+    m.add_argument("--main", required=True, help="name of the character stock.toml belongs to")
+    m.add_argument("--alt", action="append", default=[], metavar="NAME=BAGSFILE")
     args = parser.parse_args(argv)
     paths = paths or settings.paths()
     if args.command == "init":
@@ -171,4 +191,6 @@ def main(argv: list[str], paths: Paths | None = None) -> int:
         return cmd_probe(paths, args.item, args.buyout)
     if args.command == "prices":
         return cmd_prices(paths)
+    if args.command == "migrate":
+        return cmd_migrate(paths, args)
     return cmd_plan(paths, args.character)
