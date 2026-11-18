@@ -23,3 +23,4 @@ One line per finished task. Plans are private to the owner; tasks are named by p
 | 2026-11-18 | 1.17 | Quest-learned recipes are skipped while the character is below the quest level, with the reason in the report (independent review, finding 6) | #17 |
 | 2026-11-18 | 1.18 | Sales of leftover crafts count on the AH only up to what is listed today (and the sale limit); greens still kept for disenchanting are not counted as sold (independent review, finding 7) | #18 |
 | 2026-11-18 | 1.19 | A damaged `prices.json` or `house.json` gives a next step in `check` and `plan`, and `prices` replaces a damaged price file; a cut-off or garbled API response is an API error; game data downloads to a temporary name and is renamed into place (independent review, finding 8) | #19 |
+| 2026-11-18 | 1.20 | `migrate` takes `--region`, `--ruleset` and `--faction` (default EU, 2, Alliance) and writes them into the profile and the saved house (independent review, finding 9) | #20 |

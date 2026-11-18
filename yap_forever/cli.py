@@ -182,7 +182,8 @@ def cmd_migrate(paths: Paths, args) -> int:
             print(f"--alt needs NAME=BAGSFILE, got {a!r}")
             return 1
         alts[name] = Path(bags).expanduser()
-    for line in migrate(args.from_user.expanduser(), args.from_data.expanduser(), paths, args.main, alts):
+    for line in migrate(args.from_user.expanduser(), args.from_data.expanduser(), paths, args.main, alts,
+                        region=args.region, ruleset=args.ruleset, faction=args.faction):
         print(line)
     print(f"Copy your API client into {paths.credentials} yourself, then run {command_hint('check')}")
     return 0
@@ -204,6 +205,9 @@ def main(argv: list[str], paths: Paths | None = None) -> int:
     m.add_argument("--from-user", type=Path, required=True, help="folder with stock.toml and bags files")
     m.add_argument("--from-data", type=Path, required=True, help="old data folder (house, prices, game data)")
     m.add_argument("--main", required=True, help="name of the character stock.toml belongs to")
+    m.add_argument("--region", choices=profile.REGIONS, default="eu", help="your region (default eu)")
+    m.add_argument("--ruleset", type=int, default=2, help="your ruleset ID (default 2)")
+    m.add_argument("--faction", choices=profile.FACTIONS, default="alliance", help="default alliance")
     m.add_argument("--alt", action="append", default=[], metavar="NAME=BAGSFILE")
     args = parser.parse_args(argv)
     paths = paths or settings.paths()
