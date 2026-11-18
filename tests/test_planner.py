@@ -365,3 +365,41 @@ class RouteModeTests(unittest.TestCase):
         gd = toy.gamedata([])
         with self.assertRaises(ValueError):
             Valuer(toy.market(), gd, toy.stock(), mode="fast")
+
+
+class KeepGreensTests(unittest.TestCase):
+    def plan(self, keep):
+        import dataclasses
+        rs = [toy.recipe(3, "BS belt", BS, {toy.COPPER_BAR: 1}, (toy.BELT, 1))]
+        listings = {**BARS, toy.BELT: [(900, 100)], toy.DUST: [(5000, 100000)]}
+        gd = toy.gamedata(rs)
+        st = dataclasses.replace(toy.stock(), keep_greens=keep)
+        return plan(gd, Valuer(toy.market(listings), gd, st), st, toy.NO_FAVOR, caps={BS: 10})
+
+    def test_greens_kept_for_another_characters_enchanting(self):
+        kept, sold = self.plan(True), self.plan(False)
+        self.assertGreater(kept.kept_greens.get(toy.BELT, 0), 0)
+        self.assertEqual(sold.kept_greens, {})
+        self.assertLess(kept.sale_proceeds, sold.sale_proceeds)
+        self.assertGreater(kept.leftover_value, sold.leftover_value)
+
+    def test_stock_keep_greens_setting(self):
+        import tempfile
+        from pathlib import Path
+        from yap_forever.config import load_stock
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / "stock.toml"
+            p.write_text("keep_greens = true\n[items]\n", encoding="utf-8")
+            self.assertTrue(load_stock(p).keep_greens)
+            p.write_text("[items]\n", encoding="utf-8")
+            self.assertFalse(load_stock(p).keep_greens)
+
+
+class CraftOnceToolTests(unittest.TestCase):
+    def test_craft_once_buys_a_missing_tool(self):
+        rs = base_recipes() + [toy.recipe(5, "BS final", BS, {toy.IRON_BAR: 1}, req=20, tools=[162])]
+        p = run_caps(rs, {BS: 20}, {**BARS, toy.IRON_BAR: [(700, 100)]}, craft_once={BS: 5})
+        last = p.steps[-1]
+        self.assertEqual((last.spell_id, last.crafts), (5, 1))
+        self.assertGreaterEqual(last.cash, 700 + 18)  # the Blacksmith Hammer from a vendor
+        self.assertIn("Buy tool Blacksmith Hammer (vendor 0s 18c)", p.events)

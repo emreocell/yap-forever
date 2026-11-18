@@ -35,6 +35,10 @@ player what changed, running the planner, and walking them through the result.
    (150, 225 or 300: the first time a profession reaches each on the account gives a legacy talent
    point), another skill, or one recipe to reach and craft once (often a Merchant's Favor craft).
    Save the answer under `[goals]` in `stock.toml` if the player wants it kept.
+   If Enchanting isn't in the plan, ask whether green crafts should be **kept to disenchant on
+   another character** or sold, and set `keep_greens = true` or `false` in `stock.toml`. A
+   character with only a `bags.toml` needs a `stock.toml`: help write one (level, `[items]`,
+   `bag_slots`, `[goals]`).
 3. **Refresh prices** with `prices`. Prices update about once an hour.
 4. **Run the planner** for what they asked: `plan --character NAME --prof NAME:TARGET` (once per
    profession). Show the comparison table it prints and explain the two routes in a sentence each:
@@ -55,7 +59,6 @@ player what changed, running the planner, and walking them through the result.
   doesn't know where trainers and vendors are yet.
 - Merchant's Favor recipes for the character's standing (Alliance, Blacksmithing and
   Enchanting).
-- Shopping lists for other professions to 150 via `<python> -m yap_forever.scripts.four_profs`
-  and `.shopping`. These still need hand-holding.
-- Not yet: trainer stops on route rows, legacy talents, Horde trainer locations, gear. Say so
-  when asked, rather than guessing.
+- A shopping list in every guide; mailbox trips when `stock.toml` gives `bag_slots`.
+- Not yet: trainer names and places, legacy talents, gathering while levelling, keep-or-sell
+  advice, budget targets, gear. Say so when asked, rather than guessing.

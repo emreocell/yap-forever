@@ -10,7 +10,8 @@ THIN_SHARE = 0.5  # buying at least half of what is listed moves the price
 
 
 def _to_sell(plan, gd, market) -> str:
-    items = {i: n for i, n in plan.leftovers.items() if n >= 1 and market.net_sell(i) and i not in plan.held_for_de}
+    items = {i: n for i, n in plan.leftovers.items() if n >= 1 and market.net_sell(i) and i not in plan.held_for_de
+             and i not in plan.kept_greens}
     if not items:
         return "nothing"
     count = sum(math.floor(n) for n in items.values())

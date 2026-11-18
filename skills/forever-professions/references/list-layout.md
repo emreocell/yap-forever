@@ -24,8 +24,9 @@ Write it for that.
 
 ## Craft or buy
 
-- Craft an intermediate only when it is more than about 5% cheaper than buying it, recipe cost
-  included. Within 5% either way is fine.
+- Craft an intermediate only when it is cheaper than buying it by more than a margin: about 10%
+  early on (materials cost tens of silver, small savings aren't worth a craft), falling to about
+  5% at 300. Recipe cost included.
 - When a useful item can be crafted or bought (a tool, a bag), show both with the cost
   difference and let the player choose.
 - Judge a bag craft (or any useful craft) against the **route craft it replaces** at the same
@@ -44,3 +45,14 @@ Write it for that.
 - Green crafts are not sold when the player (or another of their characters) can disenchant:
   mark them for disenchanting and leave their value out of "leftovers sell for".
 - Whites are vendored or parked in the mail (send and return) until there's time to sell.
+
+## Trainer stages and trips
+
+- A route is laid out in stages that end where each rank is trained. A rank can be trained
+  anywhere from its required skill to the cap (50–75, 125–150, 200–225, 275–300): train it on the
+  trip that learns a trainer recipe, as written guides do.
+- Trainer recipes are the same at every trainer. Trips away from home are rank training to 225
+  and 300 (Artisan and Master trainers sit in set towns), vendor-sold patterns and the Merchant's
+  Favor vendor. Say a trip is needed, how to avoid a second one (buy every vendor pattern on one
+  visit; patterns can be bought before they can be learned), and what to bring to keep levelling
+  at a remote trainer. Don't give places until the planner knows them.
