@@ -4,7 +4,7 @@
 | Setting | Value | Source | Ask again when |
 |---|---|---|---|
 | Requirements document (BT) | The owner's private design spec `public-skill-design.md` and plan `yap-forever-phase1-plan.md` (2026-11-18), kept outside this public repo; only the file names are recorded here | asked | a phase gets its own plan or the spec is revised |
-| Remote and CI | GitHub `sableon/yap-forever` (public, `origin`). No CI yet; GitHub Actions on Windows, macOS and Linux with Python 3.11 and 3.13 is planned in phase 1 | asked | CI is added |
+| Remote and CI | GitHub `sableon/yap-forever` (public, `origin`). GitHub Actions runs the tests on Windows, macOS and Linux with Python 3.11 and 3.13 (since PR #8) | asked | |
 | Branch rules | Work on a task branch and reach `main` only by pull request; no direct commits or pushes to `main`. Once CI exists, merge only with CI green | asked; "CI green" derived from the spec | |
 | Who merges | An agent may merge every pull request within a plan section the owner approved | asked | |
 | Stack | Inherited from the owner's personal planner: Python 3.11+ standard library only, `unittest` | derived | |
@@ -14,6 +14,8 @@
 | Verified build | After the last change of a slice: `python3 -m unittest discover -s tests -t .` passes; plus the route reproduction and the plugin install check in a fresh session once they exist; once CI exists, all its jobs green. Then a tag | default, adapted | |
 | Tests without code changes | Always run the full suite, documents included: it takes under a second, and `test_no_private_details` scans every tracked file | default, adapted | the suite gets slow |
 | Manual tests | Suggested after each slice, with test cases and data prepared as part of the slice, including the owner's in-game checks | default | |
+| Commit identity | Repo-local `user.email` is the owner's GitHub noreply address (since 2026-11-18; earlier history keeps the personal address, owner's choice). GitHub's "keep email private" and "block pushes that expose my email" are the owner's to turn on. A test fails on a non-noreply commit after the baseline | asked | |
+| Agent merge permission | Agents may merge (row above); the owner confirms in chat until a matching Claude Code permission rule exists | derived | a permission rule is added |
 | Commit conventions | Conventional prefixes (`feat:`, `fix:`, `chore:`), enforced by a hook or message template, not by choosing a model | default | |
 | Progress tracking | Ledger `docs/progress.md`, one line per finished task | default | another tracker is adopted |
 | Lessons | A lessons pass at the end of each phase with `/recording-lessons-learned`, kept outside this repo, saved on the owner's OK | derived | |

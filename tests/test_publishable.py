@@ -1,5 +1,6 @@
 """Checks on what the public repository ships: manifests, skill, credits, no private details."""
 import json
+import os
 import re
 import subprocess
 import unittest
@@ -38,7 +39,7 @@ PRIVATE = [
     ("macOS home path", re.compile(r"/Use[r]s/")),
     ("Linux home path", re.compile(r"/hom[e]/\w")),
     ("Windows home path", re.compile(r"C:\\Use[r]s\\", re.I)),
-    ("email address", re.compile(r"\b(?!noreply@)[\w.+-]+@[\w-]+\.[a-z]{2,}\b", re.I)),
+    ("email address", re.compile(r"\b(?!noreply@)[\w.+-]+@(?!users\.noreply\.)[\w-]+\.[a-z]{2,}\b", re.I)),
     ("ssh key option", re.compile(r"\bss[h] -i\b")),
 ]
 
@@ -93,3 +94,34 @@ class PublishableTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+# Commits up to and including this one may carry the owner's personal email (published before
+# the noreply switch on 2026-11-18); every later commit must use a noreply address.
+IDENTITY_BASELINE = "8583233"
+
+
+def non_noreply(emails: list[str]) -> list[str]:
+    return sorted({e for e in emails if e and "noreply" not in e})
+
+
+class CommitIdentityTests(unittest.TestCase):
+    def test_non_noreply_flags_personal_addresses(self):
+        personal = "x" + "@" + "mail.example"  # built up so the private-details scan ignores it
+        self.assertEqual(non_noreply(["1+a@users.noreply.github.com", "noreply@github.com", personal]),
+                         [personal])
+
+    def test_commits_after_baseline_use_noreply(self):
+        have = subprocess.run(["git", "cat-file", "-e", IDENTITY_BASELINE + "^{commit}"], cwd=ROOT,
+                              capture_output=True)
+        if have.returncode != 0:
+            self.skipTest("shallow clone without the baseline commit")
+        # On a pull_request run, HEAD is GitHub's throwaway test merge; check the PR's own commits
+        # (its second parent). The real merge onto main is checked by the push run that follows.
+        tip = "HEAD^2" if os.environ.get("GITHUB_EVENT_NAME") == "pull_request" else "HEAD"
+        emails = subprocess.run(["git", "log", f"{IDENTITY_BASELINE}..{tip}", "--format=%ae%n%ce"],
+                                cwd=ROOT, capture_output=True, text=True, encoding="utf-8",
+                                check=True).stdout.split()
+        self.assertEqual(len(non_noreply(emails)), 0,
+                         "a commit after the baseline uses a personal email: set the repo's user.email "
+                         "to your GitHub noreply address and turn on 'Keep my email private'")
