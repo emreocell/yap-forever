@@ -54,6 +54,15 @@ class MigrateTests(unittest.TestCase):
 
 
 
+class NamesWithSpacesTests(MigrateTests):
+    def test_names_with_spaces_and_accents_load(self):
+        migrate(self.user, self.data, self.dest, "Enchantry Northenwind",
+                {"Élatael Northenwind": self.user / "alt2-bags.toml"})
+        prof = profile.load_profile(self.dest.profile)
+        self.assertEqual(set(prof.characters), {"Enchantry Northenwind", "Élatael Northenwind"})
+        self.assertTrue((self.dest.character("Enchantry Northenwind") / "stock.toml").exists())
+
+
 class MigrateCliTests(MigrateTests):
     def test_cli_migrate_parses_alts(self):
         import contextlib, io

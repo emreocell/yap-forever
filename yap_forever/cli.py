@@ -18,8 +18,9 @@ region = "eu"        # eu, us, kr or tw
 ruleset = 2          # 2 = Normal
 faction = "alliance" # alliance or horde
 
-# One section per character you plan for. Favor standing: Neutral, Friendly, Honored, Revered, Exalted.
-[characters.Main]
+# One section per character you plan for, by its full two-word Forever name, in quotes.
+# Favor standing: Neutral, Friendly, Honored, Revered, Exalted.
+[characters."Firstname Lastname"]
 favor_standing = "Neutral"
 """
 

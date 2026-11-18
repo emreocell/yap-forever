@@ -85,7 +85,7 @@ class CliTests(unittest.TestCase):
 
     def test_plan_without_prices_names_next_step(self):
         run(["init"], self.paths)
-        code, out = run(["plan", "--character", "Main"], self.paths)
+        code, out = run(["plan", "--character", "Firstname Lastname"], self.paths)
         self.assertEqual(code, 1)
         self.assertIn(cli.command_hint("prices"), out)
 
@@ -94,11 +94,11 @@ class CliTests(unittest.TestCase):
         from unittest import mock
         run(["init"], self.paths)
         self.paths.prices.write_text('{"snapshot_time": "t", "listings": {}}', encoding="utf-8")
-        stock = self.paths.character("Main") / "stock.toml"
+        stock = self.paths.character("Firstname Lastname") / "stock.toml"
         stock.parent.mkdir(parents=True)
         stock.write_text("level = 20\n[items]\n", encoding="utf-8")
         with mock.patch("urllib.request.urlopen", side_effect=urllib.error.URLError("offline")):
-            code, out = run(["plan", "--character", "Main"], self.paths)
+            code, out = run(["plan", "--character", "Firstname Lastname"], self.paths)
         self.assertEqual(code, 1)
         self.assertIn("network", out)
 
@@ -106,7 +106,7 @@ class CliTests(unittest.TestCase):
         run(["init"], self.paths)
         code, out = run(["plan", "--character", "Bob"], self.paths)
         self.assertEqual(code, 1)
-        self.assertIn("Main", out)
+        self.assertIn("Firstname Lastname", out)
 
 
 if __name__ == "__main__":

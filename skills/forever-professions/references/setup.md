@@ -21,8 +21,9 @@ Fill in `profile.toml` with the player:
   say so plainly.
 - `ruleset`: `2` is Normal.
 - `faction`: `alliance` or `horde`.
-- One `[characters.<Name>]` section per character, with `favor_standing` (`Neutral`, `Friendly`,
-  `Honored`, `Revered` or `Exalted`).
+- One section per character, under its full name in quotes (Forever names are two words):
+  `[characters."Aldra Stoneward"]`, with `favor_standing` (`Neutral`, `Friendly`, `Honored`,
+  `Revered` or `Exalted`). Pass the same name to `plan --character "Aldra Stoneward"`.
 
 Each character planned gets `characters/<Name>/stock.toml`:
 
