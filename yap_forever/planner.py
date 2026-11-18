@@ -107,9 +107,12 @@ def apply_favor(recipes: dict, favor) -> dict:
 
 def plan(gd, valuer, stock, favor, cap: int = 225, quests: dict | None = None,
          reuse: dict[int, tuple[float, float]] | None = None, caps: dict[int, int] | None = None,
-         craft_once: dict[int, int] | None = None, exclude: frozenset[int] = frozenset()) -> Plan:
+         craft_once: dict[int, int] | None = None, exclude: frozenset[int] = frozenset(),
+         one_time_in_full: bool = False) -> Plan:
     """caps: profession -> target skill (default Blacksmithing and Enchanting to `cap`).
     craft_once: profession -> recipe crafted once on reaching its cap. exclude: recipes not to use.
+    one_time_in_full: in gold mode, charge a recipe's one-time costs (pattern, fee, tools) in full
+    rather than spread over the points it could cover (a candidate route; see compare.settle_routes).
     reuse: item -> (count later steps consume, value per unit), credited when a step makes it."""
     quests = quests or {}
     reuse = reuse or {}
@@ -416,7 +419,8 @@ def plan(gd, valuer, stock, favor, cap: int = 225, quests: dict | None = None,
             score = c.score - out_val + one_time / usable
             if valuer.mode == "gold":  # gold spent first; among equal gold, the lower total value
                 one_cash = lo[0].cash + sum(t["cost"].cash for t in tools)
-                key = (round(c.cash + one_cash / usable - reuse_val, 2), score, r.spell_id)
+                spread = 1 if one_time_in_full else usable
+                key = (round(c.cash + one_cash / spread - reuse_val, 2), score, r.spell_id)
             else:
                 key = (score, r.spell_id)
             if best is None or key < best[0]:

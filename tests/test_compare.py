@@ -77,17 +77,54 @@ if __name__ == "__main__":
     unittest.main()
 
 
-class LeastGoldGuardTests(unittest.TestCase):
+class SettleRoutesTests(unittest.TestCase):
+    """Among candidates that reach the targets: least gold is the lowest gold, least value the lowest value."""
+
     def test_least_gold_never_costs_more_gold(self):
         from yap_forever.compare import compare, settle_routes
-        gold_route, value_route = Plan(cash_total=500, economic_total=900), Plan(cash_total=400, economic_total=700)
-        routes, same = settle_routes({"gold": gold_route, "value": value_route})
-        self.assertIs(routes["gold"], value_route)
-        self.assertTrue(same)
+        a = Plan(cash_total=500, economic_total=900, final_skill={BS: 20})
+        b = Plan(cash_total=400, economic_total=700, final_skill={BS: 20})
+        routes, same = settle_routes([a, b], {BS: 20})
+        self.assertEqual((routes["gold"], routes["value"], same), (b, b, True))
         text = compare(routes, toy.gamedata([]), toy.market(), toy.stock(), same=same)
         self.assertIn("The least-total-value route also spends the least gold", text)
 
-    def test_routes_kept_when_gold_route_is_cheaper(self):
+    def test_two_routes_when_they_differ(self):
         from yap_forever.compare import settle_routes
-        g, v = Plan(cash_total=300), Plan(cash_total=400)
-        self.assertEqual(settle_routes({"gold": g, "value": v}), ({"gold": g, "value": v}, False))
+        a = Plan(cash_total=300, economic_total=900, final_skill={BS: 20})
+        b = Plan(cash_total=400, economic_total=700, final_skill={BS: 20})
+        routes, same = settle_routes([a, b], {BS: 20})
+        self.assertEqual((routes["gold"], routes["value"], same), (a, b, False))
+
+    def test_route_that_stops_short_is_not_chosen(self):
+        from yap_forever.compare import settle_routes
+        short = Plan(cash_total=10, economic_total=10, final_skill={BS: 12})
+        full = Plan(cash_total=400, economic_total=700, final_skill={BS: 20})
+        routes, _ = settle_routes([short, full], {BS: 20})
+        self.assertEqual((routes["gold"], routes["value"]), (full, full))
+
+    def test_all_short_keeps_the_furthest(self):
+        from yap_forever.compare import settle_routes
+        a = Plan(cash_total=10, economic_total=10, final_skill={BS: 12})
+        b = Plan(cash_total=40, economic_total=70, final_skill={BS: 15})
+        routes, _ = settle_routes([a, b], {BS: 20})
+        self.assertEqual(routes["gold"], b)
+
+
+class OneTimeInFullTests(unittest.TestCase):
+    def test_gold_variant_charges_patterns_in_full(self):
+        # The pattern's 15s looks cheap spread over 59 points, but a free recipe takes over at 10.
+        rs = [toy.recipe(1, "BS basic", BS, {toy.COPPER_BAR: 1}, (toy.STONE, 1)),
+              toy.recipe(30, "BS scroll", BS, {toy.IRON_BAR: 1}, (toy.STONE, 1), source="scroll", scroll=toy.SCROLL),
+              toy.recipe(31, "BS later", BS, {toy.DUST: 1}, (toy.STONE, 1), req=10)]
+        gd = toy.gamedata(rs)
+        gd.vendor_prices[toy.SCROLL] = 1500
+        st = toy.stock({toy.IRON_BAR: 100, toy.DUST: 100})
+        m = toy.market({toy.COPPER_BAR: [(30, 100000)]})
+        spread = plan(gd, Valuer(m, gd, st, mode="gold"), st, toy.NO_FAVOR, caps={BS: 60})
+        full = plan(gd, Valuer(m, gd, st, mode="gold"), st, toy.NO_FAVOR, caps={BS: 60}, one_time_in_full=True)
+        self.assertIn(30, {s.spell_id for s in spread.steps})
+        self.assertNotIn(30, {s.spell_id for s in full.steps})
+        self.assertLess(full.cash_total, spread.cash_total)
+
+

@@ -162,7 +162,11 @@ def cmd_plan(paths: Paths, character: str, profs: list[str] | None = None) -> in
         return 1
     from yap_forever import config
     try:
-        goals = dict(config.parse_prof_arg(x) for x in profs or []) or config.load_stock(stock).goals
+        flags = [config.parse_prof_arg(x) for x in profs or []]
+        if len(flags) > 2 or len({p for p, _ in flags}) < len(flags):
+            print("plan one or two different professions at a time (one --prof each)")
+            return 1
+        goals = dict(flags) or config.load_stock(stock).goals
     except ValueError as e:
         print(e)
         return 1

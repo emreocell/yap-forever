@@ -160,6 +160,14 @@ class CliTests(unittest.TestCase):
         self.assertEqual(code, 1)
         self.assertIn("unknown profession", out)
 
+    def test_plan_rejects_three_professions_or_a_repeat(self):
+        self.ready_home()
+        for flags in (["blacksmithing:20", "enchanting:20", "tailoring:20"], ["blacksmithing:20", "blacksmithing:30"]):
+            argv = ["plan", "--character", "Firstname Lastname"] + [x for f in flags for x in ("--prof", f)]
+            code, out = run(argv, self.paths)
+            self.assertEqual(code, 1, flags)
+            self.assertIn("one or two different professions", out)
+
     def test_plan_unknown_character_lists_known(self):
         run(["init"], self.paths)
         code, out = run(["plan", "--character", "Bob"], self.paths)

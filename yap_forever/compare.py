@@ -31,13 +31,21 @@ def _thin(plan, gd, market) -> str:
     return "; ".join(names) or "none"
 
 
-def settle_routes(routes: dict) -> tuple[dict, bool]:
-    """The planner chooses one skill point at a time, so its least-gold route can end up spending more
-    gold than the least-total-value one. Then the latter is the least-gold route too."""
-    g, v = routes.get("gold"), routes.get("value")
-    if g is not None and v is not None and v.cash_total <= g.cash_total + 1e-9:
-        return {**routes, "gold": v}, True
-    return routes, False
+def reaches(plan, caps: dict) -> bool:
+    return all(plan.final_skill.get(x, 0) >= c for x, c in caps.items())
+
+
+def settle_routes(candidates: list, caps: dict) -> tuple[dict, bool]:
+    """Among candidate routes that reach every target (or, if none does, those that get furthest):
+    least gold is the lowest gold out of pocket, least total value the lowest total value. The
+    planner chooses one skill point at a time, so no single mode is sure to win its own measure."""
+    pool = [p for p in candidates if reaches(p, caps)]
+    if not pool:
+        best = max(sum(p.final_skill.values()) for p in candidates)
+        pool = [p for p in candidates if sum(p.final_skill.values()) == best]
+    g = min(pool, key=lambda p: (p.cash_total, p.economic_total))
+    v = min(pool, key=lambda p: (p.economic_total, p.cash_total))
+    return {"gold": g, "value": v}, g is v
 
 
 def compare(routes: dict, gd, market, stock, mailbox_trips: dict | None = None, same: bool = False) -> str:
