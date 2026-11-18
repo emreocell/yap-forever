@@ -73,6 +73,23 @@ class GuideTests(unittest.TestCase):
         text = guide(base_recipes(), BARS)
         self.assertIn("**1–60** · 59× BS basic", text)
 
+    def test_orange_run_in_one_profession_has_no_buffer(self):
+        # Enchanting already at 60: Blacksmithing runs 1-60 alone, which the planner merges into one step.
+        text = guide(base_recipes(), BARS, stock=toy.stock(skills={ENCH: 60}))
+        self.assertIn("**1–60** · 59× BS basic", text)
+        row = next(l for l in text.splitlines() if l.startswith("| Copper Bar"))
+        self.assertEqual(row.split("|")[2].strip(), "59")
+
+    def test_disenchants_not_more_than_greens(self):
+        import re
+        rs = [toy.recipe(1, "Belt", BS, {toy.COPPER_BAR: 1}, (toy.BELT, 1)),
+              toy.recipe(2, "Ench dust", ENCH, {toy.DUST: 1})]
+        text = guide(rs, {**BARS, toy.DUST: [(300, 100000)]}, cap=40)
+        des = sum(int(n) for n in re.findall(r"· (\d+)× Disenchant greens", text))
+        belts = int(re.search(r"· (\d+)× Belt", text).group(1))
+        self.assertGreater(des, 0)
+        self.assertLessEqual(des, belts)
+
     def test_reused_craft_noted(self):
         rs = [toy.recipe(1, "Copper Rod", BS, {toy.COPPER_BAR: 1}, (toy.ROD, 1)),
               toy.recipe(2, "Ench rod", ENCH, {toy.ROD: 1})]

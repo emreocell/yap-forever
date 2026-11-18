@@ -66,6 +66,16 @@ if __name__ == "__main__":
 
 
 class BufferTests(unittest.TestCase):
+    def test_orange_run_in_one_profession_has_no_buffer(self):
+        rs = [toy.recipe(1, "BS basic", 164, {toy.COPPER_BAR: 1}, (toy.STONE, 1)),
+              toy.recipe(2, "Ench basic", 333, {toy.ROD: 1})]
+        gd = toy.gamedata(rs)
+        st = toy.stock(skills={333: 60})
+        m = toy.market({toy.COPPER_BAR: [(100, 100000)]})
+        p = plan(gd, Valuer(m, gd, st), st, toy.NO_FAVOR, cap=60)
+        text = render(p, verdict(p, st), m, gd, st, toy.NO_FAVOR)
+        self.assertIn("| Blacksmithing | 1→60 | BS basic | 59 |", text)
+
     def test_route_crafts_match_guide_buffer(self):
         from yap_forever.planner import buffer_factor
         import math

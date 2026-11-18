@@ -16,6 +16,13 @@ def buffer_factor(crafts: float) -> float:
     return BUFFER if crafts > 1 + 1e-9 else 1.0
 
 
+def step_factor(step) -> float:
+    """Buffered crafts over expected crafts for a step that may span several skill points."""
+    if step.buffered is None or not step.crafts:
+        return buffer_factor(step.crafts)
+    return step.buffered / step.crafts
+
+
 @dataclass
 class Step:
     profession: int
@@ -29,6 +36,7 @@ class Step:
     materials: dict[int, float] = field(default_factory=dict)  # from bank, farm, AH or vendor
     from_stock: dict[int, float] = field(default_factory=dict)  # part of materials from your bank
     used_made: dict[int, float] = field(default_factory=dict)  # your own crafts or disenchants used
+    buffered: float | None = None  # crafts with the buffer, judged one skill point at a time
 
 
 @dataclass
@@ -185,9 +193,9 @@ def plan(gd, valuer, stock, favor, cap: int = 225, quests: dict | None = None,
             de_credit -= need
             last = next((x for x in reversed(p.steps) if x.profession == ENCH), None)
             if last and last.spell_id == DISENCHANT and last.skill_to == s:
-                last.skill_to, last.crafts = s + 1, last.crafts + need
-            else:
-                p.steps.append(Step(ENCH, s, s + 1, DISENCHANT, "Disenchant greens", need, 0, 0))
+                last.skill_to, last.crafts, last.buffered = s + 1, last.crafts + need, last.buffered + need
+            else:  # no buffer: the count is limited by the greens you have
+                p.steps.append(Step(ENCH, s, s + 1, DISENCHANT, "Disenchant greens", need, 0, 0, buffered=need))
             skill[ENCH] = s + 1
 
     def should_hold(item, opts):
@@ -197,7 +205,7 @@ def plan(gd, valuer, stock, favor, cap: int = 225, quests: dict | None = None,
         if not info or de_skill_needed(info.item_level) > cap:
             return False
         # While disenchanting still gives Enchanting skill, that beats selling the green.
-        if de_yield(info) and skill[ENCH] < min(cap, DE_THRESHOLDS[3]):
+        if de_yield(info) and de_skill_needed(info.item_level) <= skill[ENCH] < min(cap, DE_THRESHOLDS[3]):
             return True
         # Disenchanting is the only source of an Enchanting reagent missing from the AH.
         return any(m in ench_reagents and valuer.market.depth(m) == 0 for m in de_yield(info))
@@ -349,6 +357,7 @@ def plan(gd, valuer, stock, favor, cap: int = 225, quests: dict | None = None,
         if last and last.profession == prof and last.spell_id == r.spell_id and last.skill_to == s:
             last.skill_to = s + 1
             last.crafts += crafts
+            last.buffered += crafts * buffer_factor(crafts)
             last.cash += step_cost.cash
             last.economic += step_cost.economic
             for mine, new in ((last.materials, mats), (last.from_stock, from_stock), (last.used_made, used_made)):
@@ -356,7 +365,7 @@ def plan(gd, valuer, stock, favor, cap: int = 225, quests: dict | None = None,
                     mine[i] = mine.get(i, 0) + q
         else:
             p.steps.append(Step(prof, s, s + 1, r.spell_id, r.name, crafts, step_cost.cash, step_cost.economic,
-                                mats, from_stock, used_made))
+                                mats, from_stock, used_made, crafts * buffer_factor(crafts)))
         skill[prof] = s + 1
         made_something = release_held() or made_something
         other = ENCH if prof == BS else BS
