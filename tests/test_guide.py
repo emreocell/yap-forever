@@ -14,6 +14,24 @@ def guide(recipes, listings, stock=None, cap=60):
     return render_guide(p, gd, toy.market(listings), st)
 
 
+class GoldTests(unittest.TestCase):
+    def test_silver_shown_below_100g(self):
+        from yap_forever.guide import gold
+        self.assertEqual(gold(105000), "10.5g")  # 10g 50s
+        self.assertEqual(gold(995000), "99.5g")
+        self.assertEqual(gold(15000), "1.5g")
+
+    def test_whole_gold_from_100g(self):
+        from yap_forever.guide import gold
+        self.assertEqual(gold(1000000), "100g")
+        self.assertEqual(gold(12345678), "1,235g")
+
+    def test_small_amounts(self):
+        from yap_forever.guide import gold
+        self.assertEqual(gold(250), "2s")
+        self.assertEqual(gold(42), "42c")
+
+
 class SourceGroupTests(unittest.TestCase):
     def test_groups(self):
         gd = toy.gamedata([])
