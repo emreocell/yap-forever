@@ -125,7 +125,8 @@ def cmd_prices(paths: Paths) -> int:
         print(e)
         return 1
     paths.cache.mkdir(parents=True, exist_ok=True)
-    return prices.fetch(client, house, prof.ruleset, paths.prices, paths.cache / "snapshots.log")
+    return prices.fetch(client, house, prof.ruleset, paths.prices, paths.cache / "snapshots.log",
+                        region=prof.region)
 
 
 def cmd_plan(paths: Paths, character: str) -> int:
@@ -139,6 +140,15 @@ def cmd_plan(paths: Paths, character: str) -> int:
         return 1
     if not paths.prices.exists():
         print(f"no prices yet: run {command_hint('prices')}")
+        return 1
+    saved_for = prices.Market.load(paths.prices).house
+    try:
+        house = profile.load_house(paths.house)
+    except FileNotFoundError:
+        house = None
+    if saved_for is not None and house is not None and saved_for != house:
+        print(f"your prices are for house {saved_for}, but your auction house is {house}: "
+              f"run {command_hint('prices')}")
         return 1
     stock = paths.character(character) / "stock.toml"
     if not stock.exists():

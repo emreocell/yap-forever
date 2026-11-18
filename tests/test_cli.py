@@ -102,6 +102,20 @@ class CliTests(unittest.TestCase):
         self.assertEqual(code, 1)
         self.assertIn("network", out)
 
+    def test_plan_refuses_prices_from_another_house(self):
+        from yap_forever import profile
+        run(["init"], self.paths)
+        profile.save_house(self.paths.house, 11, "eu", 2)
+        self.paths.prices.write_text('{"snapshot_time": "t", "house": 10, "region": "eu", "ruleset": 2, '
+                                     '"listings": {}}', encoding="utf-8")
+        stock = self.paths.character("Firstname Lastname") / "stock.toml"
+        stock.parent.mkdir(parents=True)
+        stock.write_text("level = 20\n[items]\n", encoding="utf-8")
+        code, out = run(["plan", "--character", "Firstname Lastname"], self.paths)
+        self.assertEqual(code, 1)
+        self.assertIn(cli.command_hint("prices"), out)
+        self.assertIn("house 10", out)
+
     def test_plan_unknown_character_lists_known(self):
         run(["init"], self.paths)
         code, out = run(["plan", "--character", "Bob"], self.paths)
