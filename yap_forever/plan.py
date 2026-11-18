@@ -3,7 +3,7 @@ from datetime import date
 from pathlib import Path
 
 from yap_forever import gamedata
-from yap_forever.compare import compare, settle_routes
+from yap_forever.compare import ROUTE_NAMES, compare, settle_routes
 from yap_forever.config import load_stock
 from yap_forever.costmodel import Valuer
 from yap_forever.favor import load_favor
@@ -13,6 +13,7 @@ from yap_forever.prices import Market
 from yap_forever.quests import load_quest_plans
 from yap_forever.report import render, verdict
 from yap_forever.settings import Paths
+from yap_forever.trips import trip_alternatives
 
 REUSE_ROUNDS = 4
 
@@ -86,9 +87,11 @@ def write_reports(paths: Paths, stock_path: Path, standing: str, goals: dict) ->
     paths.reports.mkdir(parents=True, exist_ok=True)
     files: dict[str, Path] = {}
     for m, route in routes.items():
+        alts = trip_alternatives(route, gd, market, stock, favor, caps, once, m, quests)
         full = paths.reports / f"{today}-plan-{m}.md"
-        full.write_text(render(route, verdict(route, stock), market, gd, stock, favor), encoding="utf-8")
+        full.write_text(render(route, verdict(route, stock, caps), market, gd, stock, favor, caps), encoding="utf-8")
         guide = paths.reports / f"{today}-guide-{m}.md"
-        guide.write_text(render_guide(route, gd, market, stock), encoding="utf-8")
+        guide.write_text(render_guide(route, gd, market, stock, caps, ROUTE_NAMES[m].lower(), table, alts),
+                         encoding="utf-8")
         files[f"plan-{m}"], files[f"guide-{m}"] = full, guide
     return table, files

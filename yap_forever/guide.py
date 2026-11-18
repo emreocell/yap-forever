@@ -6,7 +6,8 @@ import tomllib
 from yap_forever.config import STATIC_DIR
 from yap_forever.costmodel import BARS, ORES, STONES
 from yap_forever.gamedata import BS, ENCH, PROFESSIONS
-from yap_forever.planner import DISENCHANT as DE_SPELL, step_factor
+from yap_forever.planner import DISENCHANT as DE_SPELL, START_CAP, step_factor
+from yap_forever.trips import trips
 
 with open(STATIC_DIR / "sources.toml", "rb") as _f:
     SOURCES = {group: {int(k): v for k, v in items.items()} for group, items in tomllib.load(_f).items()}
@@ -15,7 +16,9 @@ with open(STATIC_DIR / "disenchant.toml", "rb") as _f:
                for m in (band.get("dust"), band.get("essence"), band.get("shard")) if m}
 
 GROUPS = ["Mining", "Skinning", "Cloth", "Enchanting materials", "Drops and AH"]
-EVENT = re.compile(r"^(Blacksmithing|Enchanting) (\d+): (.*)$")
+EVENT = re.compile(r"^(" + "|".join(PROFESSIONS.values()) + r") (\d+): (.*)$")
+BY_NAME = {v: k for k, v in PROFESSIONS.items()}
+STAGE_CAPS = (75, 150, 225, 300)  # each stage ends with training the next rank
 DISENCHANT = re.compile(r"^disenchant ([\d.]+) (.*)$")
 UNNAMED = re.compile(r"\bspell (\d+)\b")
 
@@ -77,15 +80,33 @@ def _add(into: dict, more: dict) -> None:
         into[i] = into.get(i, 0) + q
 
 
-def render_guide(plan, gd, market, stock) -> str:
-    target = stock.target
-    out = [f"# Blacksmithing + Enchanting to {target}", "",
-           "Level both professions side by side: craft in whichever one is lower. "
-           "Until you switch, gather and keep the materials below instead of selling them.", ""]
+def _title(caps, route) -> str:
+    names = [PROFESSIONS.get(p, str(p)) for p in caps]
+    if len(set(caps.values())) == 1:
+        title = " + ".join(names) + f" to {next(iter(caps.values()))}"
+    else:
+        title = " + ".join(f"{n} to {c}" for n, c in zip(names, caps.values()))
+    return title + (f" — {route} route" if route else "")
+
+
+def render_guide(plan, gd, market, stock, caps=None, route="", comparison="", alts=None) -> str:
+    """caps: profession -> target (default Blacksmithing and Enchanting to the stock's target).
+    alts: recipe spell -> what skipping its trip costs (None: no other way), from trips.trip_alternatives."""
+    caps = caps or {BS: stock.target, ENCH: stock.target}
+    out = [f"# {_title(caps, route)}", ""]
+    if comparison:
+        out += [comparison, ""]
+    intro = []
+    if len(caps) > 1:
+        intro.append("Level both professions side by side: craft in whichever one is lower.")
+    if stock.mining or plan.farm:
+        intro.append("Until you switch, gather and keep the materials below instead of selling them.")
+    if intro:
+        out += [" ".join(intro), ""]
     _keep(out, plan, gd, market)
-    _route(out, plan, gd, target, stock.quest_item_sales)
+    _route(out, plan, gd, caps, stock, alts or {})
     _money(out, plan, stock)
-    _notes(out, plan, market)
+    _notes(out, plan, market, gatherer=bool(stock.mining or plan.farm))
     return "\n".join(out) + "\n"
 
 
@@ -159,7 +180,7 @@ def _group_notes(group, items, gd) -> list[str]:
     elif group == "Skinning":
         unused = [n for i, n in SOURCES["skinning"].items() if i not in items]
     elif group == "Enchanting materials":
-        notes.append("Disenchanting your own Blacksmithing greens already covers part of Enchanting; "
+        notes.append("Disenchanting your own greens already covers part of Enchanting; "
                      "these are the extra materials on top.")
         unused = []
     else:
@@ -170,7 +191,25 @@ def _group_notes(group, items, gd) -> list[str]:
 
 
 # --- route ---------------------------------------------------------------------
-def _route(out, plan, gd, target, quest_limit) -> None:
+def _trip_line(t, alts) -> str:
+    if t.kind == "rank":
+        return (f"- **Trip:** {t.what}: the trainer is in a set town (the planner doesn't say where yet). "
+                "While there, learn the trainer recipes your skill allows.")
+    if t.kind == "vendor":
+        line = (f"- **Trip:** buy the pattern for {t.what} from a vendor (patterns are sold in particular "
+                "towns); buy every vendor pattern the route uses on one visit: patterns can be bought before "
+                "you can learn them")
+    else:
+        line = f"- **Trip:** the Merchant's Favor vendor (one place per faction) for {t.what}"
+    if t.spell in alts:
+        diff = alts[t.spell]
+        line += ("; there is no other way to reach the target without it" if diff is None
+                 else f"; or skip it: +{gold(diff)} for the route without it")
+    return line + "."
+
+
+def _route(out, plan, gd, caps, stock, alts) -> None:
+    quest_limit = stock.quest_item_sales
     used_by: dict[int, list[str]] = {}
     for s in plan.steps:
         for item in s.used_made:
@@ -181,38 +220,67 @@ def _route(out, plan, gd, target, quest_limit) -> None:
     disenchanted = {t.split(" ", 2)[2] for t in disenchanted if t.startswith("disenchant ")}
     held = {gd.name(i) for i in plan.held_for_de}
 
-    lines: dict[int, list] = {BS: [], ENCH: []}  # profession -> [(skill, order, text)]
-    for prof in (BS, ENCH):
-        for r in _ranges([s for s in plan.steps if s.profession == prof], gd):
-            lines[prof].append((r["from"], 1, _range_line(r, gd, used_by, disenchanted | held, quest_limit)))
+    trained = {p: sorted(s for q, s, _c, _f in plan.ranks if q == p) for p in caps}
+    first = {}
+    for p in caps:
+        start = max(1, stock.skills.get(p, 1))
+        cap0 = min([c for c in [START_CAP] + [r.cap for r in gd.trainer_ranks.get(p, [])] if c >= start],
+                   default=START_CAP)
+        first[p] = (start, STAGE_CAPS.index(cap0) if cap0 in STAGE_CAPS else 0)
+
+    def stage(p, skill, event):
+        """Rows from a training skill on belong to the next stage; events at it close the current one."""
+        return first[p][1] + sum(1 for t in trained[p] if (t < skill if event else t <= skill))
+
+    lines: dict[tuple[int, int], list] = {}  # (stage, profession) -> [(skill, order, text)]
+    for p in caps:
+        steps = [s for s in plan.steps if s.profession == p and s.skill_from < s.skill_to]
+        groups: dict[int, list] = {}
+        for s in steps:
+            groups.setdefault(stage(p, s.skill_from, False), []).append(s)
+        for k, group in groups.items():
+            for r in _ranges(group, gd):
+                lines.setdefault((k, p), []).append(
+                    (r["from"], 1, _range_line(r, gd, used_by, disenchanted | held, quest_limit)))
+        for s in plan.steps:
+            if s.profession == p and s.skill_from == s.skill_to:  # the goal recipe, crafted once
+                mats = ", ".join(f"{count(q)} {gd.name(i)}" for i, q in s.materials.items())
+                text = f"- **Craft {recipe_name(s.spell_id, s.name, gd)} once**" + (f" — {mats}" if mats else "")
+                lines.setdefault((stage(p, s.skill_from, True), p), []).append((s.skill_from, 3, text))
     de: dict[str, list] = {}  # item name -> [first skill, last skill, count]
     for e in plan.events:
         m = EVENT.match(e)
-        if not m:
+        if not m or BY_NAME[m.group(1)] not in caps:
             continue
-        prof, at, text = (BS if m.group(1) == "Blacksmithing" else ENCH), int(m.group(2)), m.group(3)
+        p, at, text = BY_NAME[m.group(1)], int(m.group(2)), m.group(3)
+        if text.startswith("craft ") and text.endswith(" once"):
+            continue  # shown as its row
         d = DISENCHANT.match(text)
         if d:
-            first, last, n = de.get(d.group(2), [at, at, 0])
-            de[d.group(2)] = [first, at, n + float(d.group(1))]
+            first_at, _last, n = de.get(d.group(2), [at, at, 0])
+            de[d.group(2)] = [first_at, at, n + float(d.group(1))]
             continue
-        lines[prof].append((at, 0, f"- *At {at}: {_fix_names(text, gd)}*"))
-    for item, (first, last, n) in de.items():
-        text = (f"- *At {first}: disenchant {count(n)} {item}*" if first == last else
-                f"- *From {first}: disenchant your {item} as you make them ({count(n)} in all, by {last})*")
-        lines[ENCH].append((first, 2, text))
+        lines.setdefault((stage(p, at, True), p), []).append((at, 0, f"- *At {at}: {_fix_names(text, gd)}*"))
+    for item, (first_at, last, n) in de.items():
+        text = (f"- *At {first_at}: disenchant {count(n)} {item}*" if first_at == last else
+                f"- *From {first_at}: disenchant your {item} as you make them ({count(n)} in all, by {last})*")
+        lines.setdefault((stage(ENCH, first_at, True), ENCH), []).append((first_at, 2, text))
+    for t in trips(plan, gd):
+        if t.profession in caps:
+            lines.setdefault((stage(t.profession, t.skill, True), t.profession), []).append(
+                (t.skill, 0.5, _trip_line(t, alts)))
 
     out += ["## Route", ""]
-    for lo, hi in ((1, 150), (150, 225), (225, target)):
-        if lo >= hi:
-            continue
-        block: list[str] = []
-        for prof in (BS, ENCH):
-            part = sorted(x for x in lines[prof] if lo <= x[0] < hi or (hi == target and x[0] == hi))
-            if part:
-                block += [f"**{PROFESSIONS[prof]}**", ""] + [t for _, _, t in part] + [""]
-        if block:
-            out += [f"### Skill {lo}–{hi}", ""] + block
+    for k in sorted({k for k, _p in lines}):
+        out += [f"### Stage {k + 1}: to {STAGE_CAPS[min(k, len(STAGE_CAPS) - 1)]}", ""]
+        for p in caps:
+            part = sorted(lines.get((k, p), []), key=lambda x: (x[0], x[1]))
+            if not part:
+                continue
+            n = k - first[p][1]
+            lo = trained[p][n - 1] if n > 0 else first[p][0]
+            hi = trained[p][n] if n < len(trained[p]) else plan.final_skill.get(p, lo)
+            out += [f"**{PROFESSIONS.get(p, p)} {lo}–{hi}**", ""] + [t for _, _, t in part] + [""]
 
 
 def _ranges(steps, gd) -> list[dict]:
@@ -269,13 +337,14 @@ def _money(out, plan, stock) -> None:
             f"- **Merchant's Favor:** {plan.favor_spent} of {stock.favor} spent.", ""]
 
 
-def _notes(out, plan, market) -> None:
+def _notes(out, plan, market, gatherer=True) -> None:
     out += ["## Notes", ""]
     for reason in plan.stall_reasons.values():
         out.append(f"- Stops early: {reason}.")
     if any("quest from" in e for e in plan.events):
         out.append("- Imperial Plate plans come from quests that need character level 50; "
                    "bring the Thorium Bars shown in the route.")
-    out += ["- Leather is costed as bought on the AH; since you skin, gather it instead.",
-            "- Stones are counted as mined along with the ore.",
-            f"- Prices: your AH snapshot of {market.snapshot_time or 'unknown time'}.", ""]
+    if gatherer:
+        out += ["- Leather is costed as bought on the AH; since you skin, gather it instead.",
+                "- Stones are counted as mined along with the ore."]
+    out += [f"- Prices: your AH snapshot of {market.snapshot_time or 'unknown time'}.", ""]
