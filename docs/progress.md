@@ -16,3 +16,4 @@ One line per finished task. Plans are private to the owner; tasks are named by p
 | 2026-11-18 | 1.10 | Two-word Forever character names: quoted TOML keys in `migrate`, the profile template and the setup guide | #10 |
 | 2026-11-18 | 1.11 | Commit identity check (noreply after a baseline), stacked-PR rule in `AGENTS.md`, CI with full history and read-only permissions, setup record updated | #11 |
 | 2026-11-18 | 1.12 | Plans start from the character's current skills (`[skills]` in `stock.toml`) and ranks already trained (independent review, finding 2) | #12 |
+| 2026-11-18 | 1.13 | 15% buffer on yellow and green steps in the guide and report, rounded up; guide and report counts agree (independent review, finding 3) | #13 |

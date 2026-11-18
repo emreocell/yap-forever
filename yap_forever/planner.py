@@ -7,6 +7,12 @@ from yap_forever.disenchant import de_skill_needed, de_yield
 from yap_forever.gamedata import BS, ENCH, PROFESSIONS
 
 START_CAP = 75  # Apprentice
+BUFFER = 1.15  # extra crafts on yellow and green steps, which are expected values, not promises
+
+
+def buffer_factor(crafts: float) -> float:
+    """1.15 for a step that may need more than one craft (yellow or green), 1 for an orange one."""
+    return BUFFER if crafts > 1 + 1e-9 else 1.0
 
 
 @dataclass
