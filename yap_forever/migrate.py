@@ -20,8 +20,11 @@ def _copy(src: Path, dst: Path, actions: list[str]) -> None:
 
 
 def migrate(user_dir: Path, data_dir: Path, dest: Paths, main: str,
-            alts: dict[str, Path]) -> list[str]:
-    """Copy stock, bags, house, prices and game data; write a profile if there is none."""
+            alts: dict[str, Path], region: str = "eu", ruleset: int = 2,
+            faction: str = "alliance") -> list[str]:
+    """Copy stock, bags, house, prices and game data; write a profile if there is none.
+
+    region, ruleset and faction go into the new profile and the saved house."""
     actions: list[str] = []
     _copy(Path(user_dir) / "stock.toml", dest.character(main) / "stock.toml", actions)
     for name, bags in alts.items():
@@ -29,7 +32,7 @@ def migrate(user_dir: Path, data_dir: Path, dest: Paths, main: str,
     house_file = Path(data_dir) / "house.json"
     if house_file.exists():
         house = int(json.loads(house_file.read_text(encoding="utf-8"))["house"])
-        profile.save_house(dest.house, house, "eu", 2)
+        profile.save_house(dest.house, house, region, ruleset)
         actions.append(f"saved house {house} -> {dest.house}")
     _copy(Path(data_dir) / "prices.json", dest.prices, actions)
     gd = Path(data_dir) / "gamedata"
@@ -44,6 +47,7 @@ def migrate(user_dir: Path, data_dir: Path, dest: Paths, main: str,
         chars = "".join(f'\n[characters.{json.dumps(n, ensure_ascii=False)}]\nfavor_standing = "Neutral"\n'
                         for n in [main, *alts])
         dest.profile.parent.mkdir(parents=True, exist_ok=True)
-        dest.profile.write_text('region = "eu"\nruleset = 2\nfaction = "alliance"\n' + chars, encoding="utf-8")
+        dest.profile.write_text(f'region = "{region}"\nruleset = {ruleset}\nfaction = "{faction}"\n' + chars,
+                                encoding="utf-8")
         actions.append(f"wrote {dest.profile}")
     return actions

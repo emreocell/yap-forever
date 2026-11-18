@@ -73,6 +73,28 @@ class MigrateCliTests(MigrateTests):
         self.assertEqual(code, 0)
         self.assertTrue((self.dest.character("Bo") / "bags.toml").exists())
 
+    def test_cli_migrate_region_ruleset_faction(self):
+        import contextlib, io
+        from yap_forever import cli
+        with contextlib.redirect_stdout(io.StringIO()):
+            code = cli.main(["migrate", "--from-user", str(self.user), "--from-data", str(self.data),
+                             "--main", "Ana", "--region", "us", "--ruleset", "3", "--faction", "horde"],
+                            self.dest)
+        self.assertEqual(code, 0)
+        prof = profile.load_profile(self.dest.profile)
+        self.assertEqual((prof.region, prof.ruleset, prof.faction), ("us", 3, "horde"))
+        saved = json.loads(self.dest.house.read_text(encoding="utf-8"))
+        self.assertEqual((saved["house"], saved["region"], saved["ruleset"]), (4242, "us", 3))
+
+    def test_cli_migrate_defaults_to_eu_alliance(self):
+        import contextlib, io
+        from yap_forever import cli
+        with contextlib.redirect_stdout(io.StringIO()):
+            cli.main(["migrate", "--from-user", str(self.user), "--from-data", str(self.data),
+                      "--main", "Ana"], self.dest)
+        prof = profile.load_profile(self.dest.profile)
+        self.assertEqual((prof.region, prof.ruleset, prof.faction), ("eu", 2, "alliance"))
+
 
 if __name__ == "__main__":
     unittest.main()
