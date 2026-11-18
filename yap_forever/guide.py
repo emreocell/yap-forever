@@ -113,10 +113,22 @@ def render_guide(plan, gd, market, stock, caps=None, route="", comparison="", al
 
 
 # --- keep while levelling ------------------------------------------------------
+def _whole(plan, gd) -> dict[int, dict]:
+    """id(step) -> its shopping row: counts in whole crafts, as the shopping list buys them."""
+    from yap_forever.shopping import route_rows  # shopping imports this module
+    return {id(st): r for r in route_rows(plan, gd) for st in r["parts"]}
+
+
 def _keep(out, plan, gd, market) -> None:
     need, bank = {}, {}
+    rows, seen = _whole(plan, gd), set()
     for s in plan.steps:
-        _add(need, {i: q * step_factor(s) for i, q in s.materials.items()})
+        row = rows.get(id(s))
+        if row is None:
+            _add(need, {i: q * step_factor(s) for i, q in s.materials.items()})
+        elif id(row) not in seen:
+            seen.add(id(row))
+            _add(need, row["need"])
         _add(bank, s.from_stock)
     groups: dict[str, list] = {}
     for item, q in need.items():
@@ -237,6 +249,7 @@ def _route(out, plan, gd, caps, stock, alts) -> None:
         """Rows from a training skill on belong to the next stage; events at it close the current one."""
         return first[p][1] + sum(1 for t in trained[p] if (t < skill if event else t <= skill))
 
+    whole = _whole(plan, gd)
     lines: dict[tuple[int, int], list] = {}  # (stage, profession) -> [(skill, order, text)]
     for p in caps:
         steps = [s for s in plan.steps if s.profession == p and s.skill_from < s.skill_to]
@@ -244,13 +257,15 @@ def _route(out, plan, gd, caps, stock, alts) -> None:
         for s in steps:
             groups.setdefault(stage(p, s.skill_from, False), []).append(s)
         for k, group in groups.items():
-            for r in _ranges(group, gd):
+            for r in _ranges(group, gd, whole):
                 lines.setdefault((k, p), []).append(
                     (r["from"], 1, _range_line(r, gd, used_by, disenchanted | held, quest_limit, plan.kept_greens)))
         for s in plan.steps:
             if s.profession == p and s.skill_from == s.skill_to:  # the goal recipe, crafted once
-                mats = ", ".join([f"{count(q)} {gd.name(i)}" for i, q in s.materials.items()]
-                                 + [f"{count(q)} {gd.name(i)} (made earlier)" for i, q in s.used_made.items()])
+                row = whole.get(id(s))
+                bring, made = (row["need"], row["earlier"]) if row else (s.materials, s.used_made)
+                mats = ", ".join([f"{count(q)} {gd.name(i)}" for i, q in bring.items()]
+                                 + [f"{count(q)} {gd.name(i)} (made earlier)" for i, q in made.items()])
                 text = f"- **Craft {recipe_name(s.spell_id, s.name, gd)} once**" + (f" — {mats}" if mats else "")
                 lines.setdefault((stage(p, s.skill_from, True), p), []).append((s.skill_from, 3, text))
     de: dict[str, list] = {}  # item name -> [first skill, last skill, count]
@@ -289,21 +304,31 @@ def _route(out, plan, gd, caps, stock, alts) -> None:
             out += [f"**{PROFESSIONS.get(p, p)} {lo}–{hi}**", ""] + [t for _, _, t in part] + [""]
 
 
-def _ranges(steps, gd) -> list[dict]:
+def _ranges(steps, gd, rows=None) -> list[dict]:
+    """rows: id(step) -> shopping row; a step with a row shows its whole crafts and their counts."""
     out: list[dict] = []
+    seen = set()
     for s in steps:
+        row = (rows or {}).get(id(s))
+        if row and id(row) in seen:  # a later part of a run already counted with its first part
+            crafts, mats, own = 0, {}, {}
+        elif row:
+            seen.add(id(row))
+            crafts, mats, own = row["n"] + row["more"], dict(row["need"]), dict(row["earlier"])
+        else:
+            k = step_factor(s)
+            crafts = s.crafts * k
+            mats = {i: q * k for i, q in s.materials.items()}
+            own = {i: q * k for i, q in s.used_made.items()}
         last = out[-1] if out else None
         if last and last["spell"] == s.spell_id and last["to"] == s.skill_from:
             last["to"] = s.skill_to
-            k = step_factor(s)
-            last["crafts"] += s.crafts * k
-            _add(last["mats"], {i: q * k for i, q in s.materials.items()})
-            _add(last["own"], {i: q * k for i, q in s.used_made.items()})
+            last["crafts"] += crafts
+            _add(last["mats"], mats)
+            _add(last["own"], own)
         else:
-            k = step_factor(s)
-            out.append({"spell": s.spell_id, "name": recipe_name(s.spell_id, s.name, gd), "from": s.skill_from, "to": s.skill_to,
-                        "crafts": s.crafts * k, "mats": {i: q * k for i, q in s.materials.items()},
-                        "own": {i: q * k for i, q in s.used_made.items()}})
+            out.append({"spell": s.spell_id, "name": recipe_name(s.spell_id, s.name, gd), "from": s.skill_from,
+                        "to": s.skill_to, "crafts": crafts, "mats": mats, "own": own})
     return out
 
 

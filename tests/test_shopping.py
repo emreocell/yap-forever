@@ -34,14 +34,6 @@ class PortedSelfChecks(unittest.TestCase):
         # Flying Tiger Goggles: 2 Tigerseye + 6 Light Leather, goggles don't stack, 16 free slots
         self.assertEqual(batch_size({818: 2, 2318: 6}, (4368, 1), {818: 20, 2318: 20, 4368: 1}, 16), 15)
 
-    def test_route_rows_moves_intermediate_to_first_row(self):
-        from yap_forever.shopping import route_rows
-        rows = route_rows(chain_plan(), chain_gd())
-        self.assertEqual(rows[0]["more"], 2)
-        self.assertEqual(rows[0]["need"], {S: 36})
-        self.assertEqual(rows[2]["need"], {S: 0, T: 4})
-        self.assertEqual(rows[2]["earlier"], {L: 4})
-
     def test_group_trips_by_slots(self):
         from yap_forever.shopping import group_trips, route_rows
         rows = route_rows(chain_plan(), chain_gd())
@@ -168,3 +160,63 @@ class SpareBankTests(unittest.TestCase):
         trip = next(l for l in lines if l.startswith("- 📬"))
         self.assertIn("From the bank: 115 Copper Bar", trip)
         self.assertNotIn("From the mail", trip)
+
+
+class WholeCraftTests(unittest.TestCase):
+    """Every count is whole crafts times what one craft takes, so rounding leaves nothing unusable."""
+
+    def test_two_per_craft_buys_whole_crafts(self):
+        from yap_forever.shopping import render_shopping
+        gd = toy.gamedata([toy.recipe(1, "BS basic", BS, {S: 2})])
+        p = orange(Plan(steps=[Step(BS, 1, 100, 1, "BS basic", 133.4, 0, 0, {S: 266.8})],
+                        bought={S: 266.8}, final_skill={BS: 100}))
+        text = "\n".join(render_shopping(p, gd, toy.market({S: [(10, 1000)]}), toy.stock())[0])
+        self.assertIn("| Copper Bar | 268 | AH |", text)  # 134 crafts; 267 would leave 1 unusable
+
+    def test_three_per_craft_is_never_short(self):
+        from yap_forever.shopping import route_rows
+        gd = toy.gamedata([toy.recipe(1, "BS basic", BS, {S: 3})])
+        p = orange(Plan(steps=[Step(BS, 1, 6, 1, "BS basic", 5.2, 0, 0, {S: 15.6})], final_skill={BS: 6}))
+        self.assertEqual(route_rows(p, gd)[0]["need"], {S: 18})
+
+    def test_own_crafts_used_before_crafting_more(self):
+        from yap_forever.shopping import route_rows
+        rows = route_rows(chain_plan(), chain_gd())  # 10 L made at the first row cover the 9 used later
+        self.assertEqual(rows[0]["more"], 0)
+        self.assertEqual(rows[0]["need"], {S: 30})
+        self.assertEqual(rows[2]["need"], {T: 4})
+        self.assertEqual(rows[2]["earlier"], {L: 4})
+
+    def test_intermediate_crafted_in_whole_batches(self):
+        from yap_forever.shopping import route_rows
+        gd = toy.gamedata([toy.recipe(40, "Make L", BS, {S: 3}, (L, 2)), toy.recipe(42, "Make G", BS, {L: 1, T: 1})])
+        p = orange(Plan(steps=[Step(BS, 1, 4, 42, "Make G", 3, 0, 0, {T: 3})], crafted={L: 3}, final_skill={BS: 4}))
+        row = route_rows(p, gd)[0]
+        self.assertEqual(row["need"], {T: 3, S: 6})  # 3 L from 2 crafts of 2
+        self.assertEqual(row["here"], {L: 3})
+
+    def test_disenchanted_reagents_are_not_bought(self):
+        from yap_forever.shopping import route_rows
+        gd = toy.gamedata([toy.recipe(1, "Enchant", 333, {toy.DUST: 2})])
+        p = orange(Plan(steps=[Step(333, 1, 5, 1, "Enchant", 4, 0, 0, used_made={toy.DUST: 8})], final_skill={333: 5}))
+        row = route_rows(p, gd)[0]
+        self.assertEqual(row["need"], {})
+        self.assertEqual(row["earlier"], {toy.DUST: 8})
+
+    def test_goal_recipe_on_the_list(self):
+        from yap_forever.shopping import render_shopping
+        gd = toy.gamedata([toy.recipe(1, "BS basic", BS, {S: 1}), toy.recipe(5, "BS final", BS, {T: 2}, req=20)])
+        p = orange(Plan(steps=[Step(BS, 1, 20, 1, "BS basic", 19, 0, 0, {S: 19}),
+                               Step(BS, 20, 20, 5, "BS final", 1, 0, 0, {T: 2})], final_skill={BS: 20}))
+        text = "\n".join(render_shopping(p, gd, toy.market({S: [(10, 100)], T: [(10, 100)]}), toy.stock())[0])
+        self.assertIn("| Iron Bar | 2 | AH |", text)
+
+    def test_row_using_extra_batch_lists_it_as_yours(self):
+        from yap_forever.shopping import route_rows
+        p = orange(Plan(steps=[Step(BS, 1, 11, 40, "Make L", 10, 0, 0, {S: 30}),
+                               Step(BS, 11, 23, 41, "Make K", 12, 0, 0, used_made={L: 12})],
+                        crafted={L: 2}, final_skill={BS: 23}))
+        rows = route_rows(p, chain_gd())
+        self.assertEqual(rows[0]["more"], 2)
+        self.assertEqual(rows[0]["need"], {S: 36})
+        self.assertEqual(rows[1]["earlier"], {L: 12})
