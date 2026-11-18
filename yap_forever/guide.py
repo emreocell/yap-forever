@@ -6,7 +6,7 @@ import tomllib
 from yap_forever.config import STATIC_DIR
 from yap_forever.costmodel import BARS, ORES, STONES
 from yap_forever.gamedata import BS, ENCH, PROFESSIONS
-from yap_forever.planner import buffer_factor
+from yap_forever.planner import DISENCHANT as DE_SPELL, step_factor
 
 with open(STATIC_DIR / "sources.toml", "rb") as _f:
     SOURCES = {group: {int(k): v for k, v in items.items()} for group, items in tomllib.load(_f).items()}
@@ -93,7 +93,7 @@ def render_guide(plan, gd, market, stock) -> str:
 def _keep(out, plan, gd, market) -> None:
     need, bank = {}, {}
     for s in plan.steps:
-        _add(need, {i: q * buffer_factor(s.crafts) for i, q in s.materials.items()})
+        _add(need, {i: q * step_factor(s) for i, q in s.materials.items()})
         _add(bank, s.from_stock)
     groups: dict[str, list] = {}
     for item, q in need.items():
@@ -221,12 +221,12 @@ def _ranges(steps, gd) -> list[dict]:
         last = out[-1] if out else None
         if last and last["spell"] == s.spell_id and last["to"] == s.skill_from:
             last["to"] = s.skill_to
-            k = buffer_factor(s.crafts)
+            k = step_factor(s)
             last["crafts"] += s.crafts * k
             _add(last["mats"], {i: q * k for i, q in s.materials.items()})
             _add(last["own"], {i: q * k for i, q in s.used_made.items()})
         else:
-            k = buffer_factor(s.crafts)
+            k = step_factor(s)
             out.append({"spell": s.spell_id, "name": recipe_name(s.spell_id, s.name, gd), "from": s.skill_from, "to": s.skill_to,
                         "crafts": s.crafts * k, "mats": {i: q * k for i, q in s.materials.items()},
                         "own": {i: q * k for i, q in s.used_made.items()}})
@@ -234,7 +234,8 @@ def _ranges(steps, gd) -> list[dict]:
 
 
 def _range_line(r, gd, used_by, for_de, quest_limit=None) -> str:
-    n = max(1, math.ceil(r["crafts"] - 1e-6))
+    # Disenchants are an expected count of greens you already have, not a buffered shopping count.
+    n = max(1, round(r["crafts"]) if r["spell"] == DE_SPELL else math.ceil(r["crafts"] - 1e-6))
     mats = [f"{count(q)} {gd.name(i)}" for i, q in r["mats"].items()] + \
            [f"{count(q)} {gd.name(i)} (yours)" for i, q in r["own"].items()]
     line = f"- **{r['from']}–{r['to']}** · {n}× {r['name']}"

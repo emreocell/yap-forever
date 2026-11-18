@@ -112,9 +112,24 @@ class PlannerTests(unittest.TestCase):
         crafts = sum(s.crafts for s in p.steps if s.profession == ENCH and s.spell_id == 0)
         self.assertAlmostEqual(crafts, 190.1, delta=0.5)
 
-    def test_greens_held_for_disenchanting_not_sold(self):
+    def test_greens_above_enchanting_gate_sold(self):
         import dataclasses
         rs = [toy.recipe(1, "Belt", BS, {toy.COPPER_BAR: 1}, (toy.BELT, 1))]
+        gd = toy.gamedata(rs)
+        # item level 50 keeps the Classic gate (150): disenchanting gives no skill before then
+        gd.items[toy.BELT] = dataclasses.replace(gd.items[toy.BELT], item_level=50)
+        st = toy.stock()
+        market = toy.market({**BARS, toy.BELT: [(5000, 10)]})
+        p = plan(gd, Valuer(market, gd, st), st, toy.NO_FAVOR)
+        self.assertEqual(p.held_for_de, {})
+        self.assertGreater(p.sale_proceeds, 0)
+
+    def test_greens_held_for_disenchanting_not_sold(self):
+        import dataclasses
+        # Dream Dust (11176) only comes from disenchanting ilvl 46-50 greens, and an Enchanting
+        # recipe needs it, so the belts are kept even though Enchanting never reaches their gate.
+        rs = [toy.recipe(1, "Belt", BS, {toy.COPPER_BAR: 1}, (toy.BELT, 1)),
+              toy.recipe(2, "Ench dream", ENCH, {11176: 1}, req=200)]
         gd = toy.gamedata(rs)
         # item level 50 keeps the Classic gate (150), out of reach for this Enchanting
         gd.items[toy.BELT] = dataclasses.replace(gd.items[toy.BELT], item_level=50)
