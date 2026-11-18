@@ -117,6 +117,8 @@ def plan(gd, valuer, stock, favor, cap: int = 225, quests: dict | None = None,
             price = favor.recipes[r.spell_id]
             return (Cost(), price, None, []) if price <= favor_left else f"not enough Favor ({price})"
         if r.source == "quest":
+            if stock.level < quests[r.spell_id].level:
+                return f"quest needs character level {quests[r.spell_id].level}"
             reqs = list(quests[r.spell_id].items.items())
             c = valuer.take_many(reqs, pools, skill, commit=False, learned=learned)
             if c is None:

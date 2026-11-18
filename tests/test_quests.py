@@ -28,6 +28,16 @@ class QuestPlanTests(unittest.TestCase):
         p = run(rs, BARS, quests=quests)
         self.assertNotIn(3, {s.spell_id for s in p.steps})
 
+    def test_quest_above_character_level_skipped(self):
+        rs = base_recipes() + [toy.recipe(3, "Quest Belt", BS, {}, (toy.STONE, 1),
+                                          source="scroll", scroll=toy.SCROLL)]
+        quests = {3: QuestPlan("Quest Belt", {toy.IRON_BAR: 20}, 50, "Someone, Tanaris")}
+        listings = {**BARS, toy.IRON_BAR: [(10, 1000)]}
+        p = run(rs, listings, stock=toy.stock(level=49), quests=quests)
+        self.assertNotIn(3, {s.spell_id for s in p.steps})
+        self.assertNotIn(toy.IRON_BAR, p.bought)
+        self.assertIn((3, "quest needs character level 50"), p.skipped)
+
     def test_real_quest_file_loads(self):
         from yap_forever.quests import load_quest_plans
         q = load_quest_plans()
