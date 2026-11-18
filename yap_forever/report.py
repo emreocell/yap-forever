@@ -4,6 +4,7 @@ from collections import defaultdict
 
 from yap_forever.costmodel import Valuer, money
 from yap_forever.gamedata import ENCH, PROFESSIONS, QUESTIE_SHA, SKILLUP_SHA, WAGO_BUILD
+from yap_forever.planner import buffer_factor
 
 SECTIONS = ["Verdict", "Farm before switching", "Switch order", "Route", "Merchant's Favor",
             "Totals", "Sell now", "Excluded recipes", "Data notes"]
@@ -67,7 +68,7 @@ def render(plan, verdict_text, market, gd, stock, favor) -> str:
     out += ["| Profession | Skill | Craft | Crafts | Cash | Net cost |", "|---|---|---|---|---|---|"]
     for s in plan.steps:
         out.append(f"| {PROFESSIONS[s.profession]} | {s.skill_from}→{s.skill_to} | {s.name} | "
-                   f"{math.ceil(s.crafts)} | {money(s.cash)} | {money(s.economic)} |")
+                   f"{math.ceil(s.crafts * buffer_factor(s.crafts) - 1e-6)} | {money(s.cash)} | {money(s.economic)} |")
     if plan.events:
         out += ["", "**Milestones**", ""] + [f"- {e}" for e in plan.events]
     if plan.crafted:

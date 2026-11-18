@@ -42,6 +42,19 @@ class GuideTests(unittest.TestCase):
         text = guide(base_recipes(), BARS)
         self.assertIn("**1–60** · 59× BS basic", text)
 
+    def test_yellow_steps_carry_15_percent_buffer_rounded_up(self):
+        # Thresholds (1, 1, 6, 11): yellow from 1, green from 6, grey at 11. Expected crafts 29.29.
+        rs = [toy.recipe(1, "BS yellow", BS, {toy.COPPER_BAR: 1}, (toy.STONE, 1), t=(1, 1, 6, 11)),
+              toy.recipe(2, "Ench basic", ENCH, {toy.ROD: 1})]
+        text = guide(rs, BARS, cap=11)
+        self.assertIn("**1–11** · 34× BS yellow", text)  # ceil(29.29 * 1.15)
+        row = next(l for l in text.splitlines() if l.startswith("| Copper Bar"))
+        self.assertEqual(row.split("|")[2].strip(), "34")
+
+    def test_orange_steps_have_no_buffer(self):
+        text = guide(base_recipes(), BARS)
+        self.assertIn("**1–60** · 59× BS basic", text)
+
     def test_reused_craft_noted(self):
         rs = [toy.recipe(1, "Copper Rod", BS, {toy.COPPER_BAR: 1}, (toy.ROD, 1)),
               toy.recipe(2, "Ench rod", ENCH, {toy.ROD: 1})]

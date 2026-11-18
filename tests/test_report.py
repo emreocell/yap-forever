@@ -63,3 +63,21 @@ class RenderTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class BufferTests(unittest.TestCase):
+    def test_route_crafts_match_guide_buffer(self):
+        from yap_forever.planner import buffer_factor
+        import math
+        rs = [toy.recipe(1, "BS yellow", 164, {toy.COPPER_BAR: 1}, (toy.STONE, 1), t=(1, 1, 6, 11)),
+              toy.recipe(2, "Ench basic", 333, {toy.ROD: 1})]
+        gd = toy.gamedata(rs)
+        st = toy.stock()
+        m = toy.market({toy.COPPER_BAR: [(100, 100000)]})
+        p = plan(gd, Valuer(m, gd, st), st, toy.NO_FAVOR, cap=11)
+        text = render(p, verdict(p, st), m, gd, st, toy.NO_FAVOR)
+        yellow = [s for s in p.steps if s.spell_id == 1 and s.crafts > 1]
+        self.assertTrue(yellow)
+        for s in yellow:
+            self.assertIn(f"| BS yellow | {math.ceil(s.crafts * 1.15 - 1e-6)} |", text)
+        self.assertEqual(buffer_factor(1.0), 1.0)
