@@ -16,6 +16,17 @@ Recorded in [docs/project-setup.md](docs/project-setup.md): remote and branch ru
 - No force-push: bring a branch up to date by merging `main` into it. Every PR appends to
   `docs/progress.md`, so open the next PR only after the previous one is merged.
 
+## Branch rules on GitHub
+
+Rulesets (since 2026-11-18): `main` needs a pull request, the six CI jobs green and code-owner
+review; no force-push or deletion. Tags `v*` can't be moved or deleted.
+
+- The owner is the only code owner and can't approve their own pull request, so the owner's PRs
+  that touch code-owned files merge with `gh pr merge --admin`. Repository admins may bypass only
+  when merging a pull request, never by pushing.
+- `--admin` also skips the CI requirement: use it only after every CI job on the PR is green, and
+  never on an outside contributor's pull request.
+
 ## Pull requests from outside contributors
 
 - Never merge an outside contributor's pull request without the owner's OK in chat. The agent
