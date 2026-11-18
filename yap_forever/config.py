@@ -37,6 +37,7 @@ class Stock:
     skills: dict[int, int] = field(default_factory=dict)  # skill line -> current skill; absent = 1
     goals: dict[int, "Goal"] = field(default_factory=dict)  # skill line -> what to plan it to
     bag_slots: int | None = None  # free bag slots while crafting; None = mailbox trips not planned
+    keep_greens: bool = False  # keep green crafts to disenchant on another character instead of selling
 
 
 MAX_SKILL = 300
@@ -115,4 +116,5 @@ def load_stock(path: Path) -> Stock:
         skills=_skills(d.get("skills", {})),
         goals={_profession_id(k): parse_goal(v) for k, v in d.get("goals", {}).items()},
         bag_slots=int(d["bag_slots"]) if "bag_slots" in d else None,
+        keep_greens=bool(d.get("keep_greens", False)),
     )

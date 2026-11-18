@@ -15,8 +15,8 @@ State on 2026-11-18, end of phase 1 work (first public planner, tag `v0.1.0-plan
 
 ## Not done yet
 
-- Two professions at once are still Blacksmithing + Enchanting; other professions go through
-  `yap_forever/scripts/` (fixed target 150).
+- Any crafting profession, one or two at once, each to its own target, plans through
+  `plan --prof` (phase 2, #29); the old alt scripts are gone.
 - No trainer stops on route rows, no legacy talents, Alliance trainer locations only, no gear.
 - No price import for players whose network can't reach the Blizzard API.
 - Only EU has been seen to serve Forever auction data.

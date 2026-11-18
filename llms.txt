@@ -27,5 +27,5 @@
 - `yap_forever/planner.py`, `costmodel.py`: route search and costs
 - `yap_forever/gamedata.py`: pinned game data sources (see [CREDITS.md](CREDITS.md))
 - `yap_forever/report.py`, `guide.py`: report and guide rendering
-- `yap_forever/scripts/`: shopping lists for other professions (to be merged into `plan`)
+- `yap_forever/plan.py`, `compare.py`, `trips.py`, `shopping.py`: both routes, the comparison, trips away, shopping list and mailbox trips
 - `tests/`: `python3 -m unittest discover -s tests -t .`

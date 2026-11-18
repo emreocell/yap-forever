@@ -207,6 +207,18 @@ class AnyProfessionGuideTests(unittest.TestCase):
         self.assertIn("Craft BS final once", text)
         self.assertNotIn("20–20", text)
 
+    def test_craft_once_row_lists_reagents_made_earlier(self):
+        from yap_forever.planner import Plan, Step
+        rs = base_recipes() + [toy.recipe(5, "BS final", BS, {toy.IRON_BAR: 1, toy.COPPER_BAR: 2}, req=20)]
+        p = Plan(steps=[Step(BS, 1, 20, 1, "BS basic", 19, 0, 0),
+                        Step(BS, 20, 20, 5, "BS final", 1, 700, 700, {toy.IRON_BAR: 1},
+                             used_made={toy.COPPER_BAR: 2})],
+                 final_skill={BS: 20})
+        text = render_guide(p, toy.gamedata(rs), toy.market(BARS), toy.stock(), caps={BS: 20})
+        line = next(l for l in text.splitlines() if "Craft BS final once" in l)
+        self.assertIn("1 Iron Bar", line)
+        self.assertIn("2 Copper Bar (made earlier)", line)
+
     def test_guide_shows_comparison(self):
         p = lw_plan([(1, 40)], [])
         text = render_guide(p, lw_gd(), toy.market(BARS), toy.stock(), caps={LW: 40}, comparison="| x | y |")
@@ -227,3 +239,16 @@ class AnyProfessionGuideTests(unittest.TestCase):
         vendor = next(l for l in text.splitlines() if l.startswith("- **Trip:**") and "BS scroll" in l)
         self.assertIn("buy every vendor pattern the route uses on one visit", vendor)
         self.assertIn("or skip it: +30s", vendor)
+
+
+class KeepGreensGuideTests(unittest.TestCase):
+    def test_kept_green_row_says_keep_for_disenchanting(self):
+        import dataclasses
+        from yap_forever.planner import Plan, Step
+        rs = [toy.recipe(3, "BS belt", BS, {toy.COPPER_BAR: 1}, (toy.BELT, 1))]
+        st = Step(BS, 1, 10, 3, "BS belt", 9, 0, 0, {toy.COPPER_BAR: 9}, buffered=9)
+        p = Plan(steps=[st], leftovers={toy.BELT: 9}, kept_greens={toy.BELT: 9}, final_skill={BS: 10})
+        text = render_guide(p, toy.gamedata(rs), toy.market(BARS),
+                            dataclasses.replace(toy.stock(), keep_greens=True), caps={BS: 10})
+        row = next(l for l in text.splitlines() if "BS belt" in l and l.startswith("- **"))
+        self.assertIn("keep for disenchanting on another character", row)

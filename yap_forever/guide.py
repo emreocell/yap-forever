@@ -208,6 +208,7 @@ def _trip_line(t, alts, plan=None, gd=None, bag_slots=None) -> str:
     if t.spell in alts:
         diff = alts[t.spell]
         line += ("; there is no other way to reach the target without it" if diff is None
+                 else "; or skip it at no extra cost" if diff <= 0.5
                  else f"; or skip it: +{gold(diff)} for the route without it")
     return line + "."
 
@@ -245,10 +246,11 @@ def _route(out, plan, gd, caps, stock, alts) -> None:
         for k, group in groups.items():
             for r in _ranges(group, gd):
                 lines.setdefault((k, p), []).append(
-                    (r["from"], 1, _range_line(r, gd, used_by, disenchanted | held, quest_limit)))
+                    (r["from"], 1, _range_line(r, gd, used_by, disenchanted | held, quest_limit, plan.kept_greens)))
         for s in plan.steps:
             if s.profession == p and s.skill_from == s.skill_to:  # the goal recipe, crafted once
-                mats = ", ".join(f"{count(q)} {gd.name(i)}" for i, q in s.materials.items())
+                mats = ", ".join([f"{count(q)} {gd.name(i)}" for i, q in s.materials.items()]
+                                 + [f"{count(q)} {gd.name(i)} (made earlier)" for i, q in s.used_made.items()])
                 text = f"- **Craft {recipe_name(s.spell_id, s.name, gd)} once**" + (f" — {mats}" if mats else "")
                 lines.setdefault((stage(p, s.skill_from, True), p), []).append((s.skill_from, 3, text))
     de: dict[str, list] = {}  # item name -> [first skill, last skill, count]
@@ -305,7 +307,7 @@ def _ranges(steps, gd) -> list[dict]:
     return out
 
 
-def _range_line(r, gd, used_by, for_de, quest_limit=None) -> str:
+def _range_line(r, gd, used_by, for_de, quest_limit=None, kept=frozenset()) -> str:
     # Disenchants are an expected count of greens you already have, not a buffered shopping count.
     n = max(1, round(r["crafts"]) if r["spell"] == DE_SPELL else math.ceil(r["crafts"] - 1e-6))
     mats = [f"{count(q)} {gd.name(i)}" for i, q in r["mats"].items()] + \
@@ -320,6 +322,8 @@ def _range_line(r, gd, used_by, for_de, quest_limit=None) -> str:
             line += f" → keep for {', '.join(used_by[item])}"
         elif gd.name(item) in for_de:
             line += " → keep for disenchanting"
+        elif item in kept:
+            line += " → keep for disenchanting on another character"
         elif item in gd.quest_items and quest_limit is not None:
             line += f" → sell up to {quest_limit} on the AH (quest item), the rest to a vendor"
         elif item in gd.quest_items:

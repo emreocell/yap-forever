@@ -128,3 +128,26 @@ class OneTimeInFullTests(unittest.TestCase):
         self.assertLess(full.cash_total, spread.cash_total)
 
 
+
+
+class GoalTripTests(unittest.TestCase):
+    def test_goal_recipe_trip_has_no_skip_alternative(self):
+        from yap_forever.plan import plan_route
+        from yap_forever.trips import trip_alternatives
+        rs = [toy.recipe(1, "BS basic", BS, {toy.COPPER_BAR: 1}, (toy.STONE, 1)),
+              toy.recipe(30, "BS scroll", BS, {toy.IRON_BAR: 1}, (toy.STONE, 1), req=20,
+                         source="scroll", scroll=toy.SCROLL)]
+        gd = toy.gamedata(rs)
+        gd.vendor_prices[toy.SCROLL] = 500
+        st, m = toy.stock(), toy.market({**BARS, toy.IRON_BAR: [(10, 100000)]})
+        args = (gd, m, st, toy.NO_FAVOR, {BS: 20}, {BS: 30}, "gold", {})
+        self.assertEqual(trip_alternatives(plan_route(*args), *args), {})
+
+
+class TripLineTests(unittest.TestCase):
+    def test_skip_that_costs_nothing_says_so(self):
+        from yap_forever.guide import _trip_line
+        from yap_forever.trips import Trip
+        t = Trip(30, BS, "vendor", "BS scroll", 30, 500)
+        self.assertIn("or skip it at no extra cost", _trip_line(t, {30: -2003}))
+        self.assertIn("or skip it: +30s", _trip_line(t, {30: 3000}))

@@ -39,7 +39,9 @@ def trip_alternatives(base, gd, market, stock, favor, caps, craft_once, mode, qu
     from yap_forever.plan import plan_route  # plan imports this module
 
     measure = (lambda p: p.cash_total) if mode == "gold" else (lambda p: p.economic_total)
-    picks = sorted((t for t in trips(base, gd) if t.spell is not None), key=lambda t: -t.cost)[:MAX_TRIP_ALTS]
+    goals = set(craft_once.values())  # the goal recipe can't be skipped
+    picks = sorted((t for t in trips(base, gd) if t.spell is not None and t.spell not in goals),
+                   key=lambda t: -t.cost)[:MAX_TRIP_ALTS]
     out: dict[int, float | None] = {}
     for t in picks:
         alt = plan_route(gd, market, stock, favor, caps, craft_once, mode, quests, exclude=frozenset({t.spell}))

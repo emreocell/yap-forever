@@ -50,6 +50,7 @@ class Plan:
     held_for_de: dict[int, tuple[float, int]] = field(default_factory=dict)
     de_materials: dict[int, float] = field(default_factory=dict)
     leftovers: dict[int, float] = field(default_factory=dict)  # produced, never used
+    kept_greens: dict[int, float] = field(default_factory=dict)  # leftovers kept to disenchant elsewhere
     fees: float = 0
     favor_spent: int = 0
     skipped: list[tuple[int, str]] = field(default_factory=list)
@@ -309,6 +310,24 @@ def plan(gd, valuer, stock, favor, cap: int = 225, quests: dict | None = None,
         p.ranks.append((prof, s, nxt.cap, nxt.fee))
         p.events.append(f"{name} {s}: train rank up to {nxt.cap} ({money(nxt.fee)})")
 
+    def get_tools(tools, s, name):
+        """Craft or buy the tools a step needs; their materials are taken with the step's."""
+        cost = Cost()
+        for t in tools:
+            item = t["item"]
+            if t["how"] == "craft":
+                tr = t["recipe"]
+                if tr.spell_id not in learned:
+                    cost += learn_now(tr, learn_option(tr), s, PROFESSIONS[tr.skill_line])
+                p.events.append(f"{name} {s}: Craft tool {gd.name(item)}")
+            else:
+                pool = pools.bought if t["how"] == "ah" else pools.vendor
+                pool[item] = pool.get(item, 0) + 1
+                cost += t["cost"]
+                p.events.append(f"Buy tool {gd.name(item)} ({t['how']} {money(t['cost'].cash)})")
+            pools.tools.add(item)
+        return cost
+
     def craft_once_step(prof, spell):
         """The goal recipe, learned and crafted once at the end of its profession's route."""
         nonlocal spent
@@ -320,16 +339,23 @@ def plan(gd, valuer, stock, favor, cap: int = 225, quests: dict | None = None,
         if isinstance(lo, str):
             p.stall_reasons[prof] = f"{name}: can't learn {r.name}: {lo}"
             return
-        if any(not tool_held(cat) for cat in r.tools):
-            p.stall_reasons[prof] = f"{name}: {r.name} needs a tool the route doesn't make"
-            return
-        requests = lo[3] + list(r.reagents.items())
+        tools = []
+        for cat in r.tools:
+            if tool_held(cat):
+                continue
+            t = tool_option(cat)
+            if t is None:
+                p.stall_reasons[prof] = f"{name}: {r.name} needs a tool that can't be bought or made"
+                return
+            tools.append(t)
+        requests = [rq for t in tools for rq in t["requests"]] + lo[3] + list(r.reagents.items())
         if valuer.take_many(requests, pools, skill, commit=False, learned=learned) is None:
             p.stall_reasons[prof] = f"{name}: materials for {r.name} not available"
             return
         step_cost = Cost()
         if spell not in learned:
             step_cost += learn_now(r, lo, s, name)
+        step_cost += get_tools(tools, s, name)
         before = _snapshot(pools)
         step_cost += valuer.take_many(requests, pools, skill, commit=True, learned=learned)
         mats, from_stock, used_made = _deltas(before, _snapshot(pools))
@@ -438,19 +464,7 @@ def plan(gd, valuer, stock, favor, cap: int = 225, quests: dict | None = None,
         if r.spell_id not in learned:
             requests = lo[3] + requests  # quest hand-ins, taken with the crafts
             step_cost += learn_now(r, lo, s, name)
-        for t in tools:
-            item = t["item"]
-            if t["how"] == "craft":
-                tr = t["recipe"]
-                if tr.spell_id not in learned:
-                    step_cost += learn_now(tr, learn_option(tr), s, PROFESSIONS[tr.skill_line])
-                p.events.append(f"{name} {s}: Craft tool {gd.name(item)}")
-            else:
-                pool = pools.bought if t["how"] == "ah" else pools.vendor
-                pool[item] = pool.get(item, 0) + 1
-                step_cost += t["cost"]
-                p.events.append(f"Buy tool {gd.name(item)} ({t['how']} {money(t['cost'].cash)})")
-            pools.tools.add(item)
+        step_cost += get_tools(tools, s, name)
         before = _snapshot(pools)
         c = valuer.take_many(requests, pools, skill, commit=True, learned=learned)
         if c is None:  # cannot happen: same requests, same order as the check above
@@ -505,6 +519,7 @@ def plan(gd, valuer, stock, favor, cap: int = 225, quests: dict | None = None,
     p.used_stock = {i: n - pools.stock.get(i, 0) for i, n in stock.items.items()
                     if n - pools.stock.get(i, 0) > 1e-9}
     de_mats = set(p.de_materials)
+    keep_greens = getattr(stock, "keep_greens", False) and not has_ench
     for item, n in list(pools.made.items()) + list(held.items()):
         if n < 1e-9:
             continue
@@ -513,6 +528,9 @@ def plan(gd, valuer, stock, favor, cap: int = 225, quests: dict | None = None,
             continue  # kept for disenchanting, not sold
         if item in de_mats:
             p.leftover_value += n * valuer.owned_value(item)
+        elif keep_greens and (de := valuer.output_options(item, 0).get("de")):
+            p.kept_greens[item] = n  # for another character's Enchanting: worth its materials
+            p.leftover_value += n * de
         else:
             p.sale_proceeds += sale_value(valuer, gd, item, n)
     p.cash_total = spent.cash
