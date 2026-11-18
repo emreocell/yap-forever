@@ -21,11 +21,13 @@ Recorded in [docs/project-setup.md](docs/project-setup.md): remote and branch ru
 Rulesets (since 2026-11-18): `main` needs a pull request, the six CI jobs green and code-owner
 review; no force-push or deletion. Tags `v*` can't be moved or deleted.
 
-- The owner is the only code owner and can't approve their own pull request, so the owner's PRs
-  that touch code-owned files merge with `gh pr merge --admin`. Repository admins may bypass only
-  when merging a pull request, never by pushing.
-- `--admin` also skips the CI requirement: use it only after every CI job on the PR is green, and
-  never on an outside contributor's pull request.
+- Required approvals are 0: the owner is the only maintainer and can't approve their own pull
+  request. Code-owner review therefore doesn't block merges; CODEOWNERS asks for the owner's
+  review on outside PRs, and only the owner (or an agent with the owner's OK) can merge them.
+  Checked 2026-11-18: PR #27, which touches `AGENTS.md`, merged with a plain `gh pr merge`.
+  Set approvals to 1 when a second maintainer gets write access.
+- Merge with a plain `gh pr merge` after CI is green. Admins can bypass the rules only when
+  merging a pull request (`--admin`); never use that without the owner's word.
 
 ## Pull requests from outside contributors
 
