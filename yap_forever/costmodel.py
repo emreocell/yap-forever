@@ -155,9 +155,16 @@ class Valuer:
         if need <= 1e-9:
             return cost
         if self.farmable(item):
+            if item in BARS:  # smelt what the bank's ore, coal and bars allow before mining more
+                n = min(need, self._smeltable(item, pools))
+                if n > 1e-9:
+                    cost = cost + self._smelt_owned(item, n, pools, move)
+                    need -= n
+                if need <= 1e-9:
+                    return cost
             move(pools.farmed, item, need)
-            extra = self._smelt_extras(item, need, pools, move) if item in BARS else 0
-            return cost + Cost(extra, extra + need * self.owned_value(item))
+            extra = self._smelt_extras(item, need, pools, move) if item in BARS else Cost()
+            return cost + extra + Cost(0, need * self.owned_value(item))
         buy = self.buy_option(item, need, pools.bought.get(item, 0))
         if buy:
             kind, price = buy
@@ -184,20 +191,71 @@ class Valuer:
                     return cost + sub
         return None
 
-    def _smelt_extras(self, bar: int, n: float, pools: Pools, move) -> float:
-        """Cash for non-ore smelting reagents (coal) when farming n bars; recorded as vendor buys."""
+    def _owned(self, item: int, pools: Pools) -> float:
+        return pools.made.get(item, 0) + pools.stock.get(item, 0)
+
+    def _smeltable(self, bar: int, pools: Pools) -> float:
+        """Bars that owned ore and bars could make (component bars smelted in turn). Coal and other
+        vendor reagents don't limit it: they come from the bank first, then the vendor."""
+        if bar not in BARS or not self.farmable(bar):
+            return 0.0
         _name, reagents, _skill, per = BARS[bar]
-        cash = 0.0
+        limits = [(self._owned(r, pools) + self._smeltable(r, pools)) * per / q
+                  for r, q in reagents.items() if r in ORES or r in BARS]
+        return min(limits) if limits else 0.0
+
+    def _take_owned(self, item: int, qty: float, pools: Pools, move) -> Cost:
+        """Take qty from made, then the bank, then smelt the rest from owned reagents."""
+        cost = Cost()
+        for pool, made in ((pools.made, True), (pools.stock, False)):
+            n = min(pool.get(item, 0), qty)
+            if n > 1e-9:
+                move(pool, item, -n)
+                v = self.owned_value(item)
+                cost = cost + Cost(0, 0 if made else n * v, n * v)
+                qty -= n
+        if qty > 1e-9:
+            cost = cost + self._smelt_owned(item, qty, pools, move)
+        return cost
+
+    def _smelt_owned(self, bar: int, n: float, pools: Pools, move) -> Cost:
+        _name, reagents, _skill, per = BARS[bar]
+        cost = Cost()
+        for r, q in reagents.items():
+            if r in ORES or r in BARS:
+                cost = cost + self._take_owned(r, q * n / per, pools, move)
+            else:
+                cost = cost + self._vendor_reagent(r, q * n / per, pools, move)
+        return cost
+
+    def _vendor_reagent(self, item: int, qty: float, pools: Pools, move) -> Cost:
+        """Coal and the like: from the bank first (no cash, counted at its value), the rest from a vendor."""
+        cost = Cost()
+        for pool, made in ((pools.made, True), (pools.stock, False)):
+            n = min(pool.get(item, 0), qty)
+            if n > 1e-9:
+                move(pool, item, -n)
+                v = self.owned_value(item)
+                cost = cost + Cost(0, 0 if made else n * v, n * v)
+                qty -= n
+        if qty <= 1e-9:
+            return cost
+        unit = self.gd.vendor_prices.get(item, self.gd.items[item].buy_price if item in self.gd.items else 0)
+        move(pools.vendor, item, qty)
+        return cost + Cost(unit * qty, unit * qty)
+
+    def _smelt_extras(self, bar: int, n: float, pools: Pools, move) -> Cost:
+        """Non-ore smelting reagents (coal) when farming n bars: bank first, then vendor."""
+        _name, reagents, _skill, per = BARS[bar]
+        cost = Cost()
         for r, q in reagents.items():
             if r in ORES:
                 continue
             if r in BARS:
-                cash += self._smelt_extras(r, q * n / per, pools, move)
+                cost = cost + self._smelt_extras(r, q * n / per, pools, move)
             else:
-                unit = self.gd.vendor_prices.get(r, self.gd.items[r].buy_price if r in self.gd.items else 0)
-                move(pools.vendor, r, q * n / per)
-                cash += unit * q * n / per
-        return cash
+                cost = cost + self._vendor_reagent(r, q * n / per, pools, move)
+        return cost
 
 
 def bars_to_ore(farmed: dict[int, float]) -> dict[int, int]:

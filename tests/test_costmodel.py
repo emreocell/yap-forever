@@ -143,3 +143,47 @@ class QuestSalesLimitTests(unittest.TestCase):
         v = self.valuer(10)
         # 10 on the AH at 475 net, 10 to a vendor at 20
         self.assertEqual(sale_value(v, v.gd, toy.VEST, 20), 10 * 475 + 10 * 20)
+
+
+class SmeltFromStockTests(unittest.TestCase):
+    """Bars that would be farmed come first from ore, coal and bars already in the bank."""
+    COPPER_BAR, TIN_BAR, BRONZE_BAR, IRON_ORE, IRON_BAR, COAL, STEEL_BAR = 2840, 3576, 2841, 2772, 3575, 3857, 3859
+
+    def take(self, item, qty, stock_items, mining):
+        gd = toy.gamedata([])
+        st = toy.stock(stock_items, mining=mining)
+        v = Valuer(toy.market(), gd, st)
+        pools = Pools.from_stock(st)
+        return v.take(item, qty, pools, skills={}), pools
+
+    def test_bronze_smelted_from_banked_copper_and_tin(self):
+        c, pools = self.take(self.BRONZE_BAR, 10, {self.COPPER_BAR: 40, self.TIN_BAR: 40}, mining=100)
+        self.assertEqual(c.cash, 0)
+        self.assertEqual((pools.stock[self.COPPER_BAR], pools.stock[self.TIN_BAR]), (35, 35))
+        self.assertEqual(pools.farmed, {})
+
+    def test_iron_smelted_from_banked_ore(self):
+        c, pools = self.take(self.IRON_BAR, 5, {self.IRON_ORE: 100}, mining=125)
+        self.assertEqual(pools.stock[self.IRON_ORE], 95)
+        self.assertEqual(pools.farmed, {})
+
+    def test_banked_coal_used_before_vendor(self):
+        c, pools = self.take(self.STEEL_BAR, 2, {self.COAL: 20}, mining=165)
+        self.assertEqual(pools.stock[self.COAL], 18)
+        self.assertEqual(pools.vendor.get(self.COAL, 0), 0)
+        self.assertEqual(pools.farmed.get(self.IRON_BAR, 0) + pools.farmed.get(self.STEEL_BAR, 0) > 0, True)
+
+    def test_banked_coal_counts_at_its_value(self):
+        from yap_forever.costmodel import Valuer as V
+        gd = toy.gamedata([])
+        st = toy.stock({self.COAL: 20, self.IRON_ORE: 20}, mining=165)
+        m = toy.market({self.COAL: [(100, 50)]})  # sells for 95 after the AH cut
+        v = V(m, gd, st)
+        c = v.take(self.STEEL_BAR, 2, Pools.from_stock(st), skills={})
+        self.assertEqual(c.cash, 0)
+        self.assertGreaterEqual(c.economic, 2 * 95)
+
+    def test_partial_bank_then_farm(self):
+        c, pools = self.take(self.IRON_BAR, 5, {self.IRON_ORE: 3}, mining=125)
+        self.assertEqual(pools.stock[self.IRON_ORE], 0)
+        self.assertAlmostEqual(pools.farmed[self.IRON_BAR], 2)
