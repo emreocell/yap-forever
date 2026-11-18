@@ -240,3 +240,102 @@ class NoOvercraftTests(unittest.TestCase):
         rs = base_recipes() + [toy.recipe(3, "Vest", BS, {toy.COPPER_BAR: 1}, (toy.VEST, 1), t=(1, 1, 50, 99))]
         p = run(rs, {**BARS, toy.VEST: [(1000, 50)]}, cap=40)
         self.assertNotIn(3, {s.spell_id for s in p.steps})
+
+
+LW = 165
+
+
+def run_caps(recipes, caps, listings=None, stock=None, craft_once=None, exclude=frozenset()):
+    gd = toy.gamedata(recipes)
+    st = stock or toy.stock()
+    return plan(gd, Valuer(toy.market(listings), gd, st), st, toy.NO_FAVOR, caps=caps,
+                craft_once=craft_once, exclude=exclude)
+
+
+class AnyProfessionTests(unittest.TestCase):
+    def test_single_profession_route(self):
+        rs = base_recipes() + [toy.recipe(10, "LW basic", LW, {toy.COPPER_BAR: 1})]
+        p = run_caps(rs, {LW: 40}, BARS)
+        self.assertEqual(p.final_skill, {LW: 40})
+        self.assertEqual({s.profession for s in p.steps}, {LW})
+
+    def test_per_profession_targets(self):
+        p = run_caps(base_recipes(), {BS: 30, ENCH: 20}, BARS)
+        self.assertEqual(p.final_skill, {BS: 30, ENCH: 20})
+
+    def test_goal_already_reached(self):
+        p = run_caps(base_recipes(), {BS: 40, ENCH: 20}, BARS, stock=toy.stock(skills={BS: 50}))
+        self.assertFalse([s for s in p.steps if s.profession == BS])
+        self.assertIn("Blacksmithing already at 50", p.events)
+        self.assertEqual(p.final_skill[ENCH], 20)
+
+    def test_no_disenchant_without_enchanting(self):
+        rs = base_recipes() + [toy.recipe(3, "BS belt", BS, {toy.COPPER_BAR: 2}, (toy.BELT, 1))]
+        listings = {**BARS, toy.DUST: [(5000, 100000)], toy.ESSENCE: [(20000, 100000)]}
+        with_ench = run_caps(rs, {BS: 30, ENCH: 30}, listings)
+        self.assertIn(3, {s.spell_id for s in with_ench.steps})  # the disenchant value pulls it in
+        alone = run_caps(rs, {BS: 30}, listings)
+        self.assertEqual({s.spell_id for s in alone.steps}, {1})
+        self.assertEqual(alone.held_for_de, {})
+
+    def test_craft_once_final_step(self):
+        rs = base_recipes() + [toy.recipe(5, "BS final", BS, {toy.IRON_BAR: 1}, req=20)]
+        p = run_caps(rs, {BS: 20}, {**BARS, toy.IRON_BAR: [(700, 100)]}, craft_once={BS: 5})
+        last = p.steps[-1]
+        self.assertEqual((last.spell_id, last.crafts, last.skill_from, last.skill_to), (5, 1, 20, 20))
+        self.assertGreaterEqual(last.cash, 700)
+
+    def test_exclude_recipe(self):
+        rs = base_recipes() + [toy.recipe(3, "BS iron", BS, {toy.IRON_BAR: 1}, (toy.STONE, 1))]
+        listings = {**BARS, toy.IRON_BAR: [(10, 100000)]}
+        self.assertIn(3, {s.spell_id for s in run_caps(rs, {BS: 30}, listings).steps})
+        p = run_caps(rs, {BS: 30}, listings, exclude=frozenset({3}))
+        self.assertEqual({s.spell_id for s in p.steps}, {1})
+
+    def test_rank_trained_with_trainer_recipe_in_window(self):
+        rs = base_recipes() + [toy.recipe(6, "BS mid", BS, {toy.IRON_BAR: 1}, (toy.STONE, 1), req=60)]
+        p = run_caps(rs, {BS: 80}, {**BARS, toy.IRON_BAR: [(10, 100000)]})
+        self.assertIn("Blacksmithing 60: train rank up to 150 (4s 50c)", p.events)
+        train = p.events.index("Blacksmithing 60: train rank up to 150 (4s 50c)")
+        self.assertTrue(p.events[train + 1].startswith("Blacksmithing 60: Learn BS mid"))
+        self.assertEqual(p.final_skill[BS], 80)
+
+    def test_rank_trained_at_cap_without_trainer_visit(self):
+        p = run_caps(base_recipes(), {BS: 80}, BARS)
+        self.assertIn("Blacksmithing 75: train rank up to 150 (4s 50c)", p.events)
+
+    def test_no_window_training_beyond_target(self):
+        rs = base_recipes() + [toy.recipe(6, "BS mid", BS, {toy.IRON_BAR: 1}, (toy.STONE, 1), req=60)]
+        p = run_caps(rs, {BS: 70}, {**BARS, toy.IRON_BAR: [(10, 100000)]})
+        self.assertFalse([e for e in p.events if "train rank" in e])
+
+
+class ResolveGoalsTests(unittest.TestCase):
+    def setUp(self):
+        from yap_forever.config import Goal
+        self.Goal = Goal
+        self.gd = toy.gamedata(base_recipes() + [
+            toy.recipe(3, "BS Iron Thing", BS, {toy.IRON_BAR: 1}, req=40),
+            toy.recipe(4, "BS Mystery", BS, {toy.IRON_BAR: 1}, req=50, source="unknown")])
+
+    def test_resolve_recipe_by_name_and_id(self):
+        from yap_forever.planner import resolve_goals
+        caps, once = resolve_goals({BS: self.Goal(recipe="bs iron thing"), ENCH: self.Goal(skill=150)}, self.gd)
+        self.assertEqual((caps, once), ({BS: 40, ENCH: 150}, {BS: 3}))
+        self.assertEqual(resolve_goals({BS: self.Goal(recipe="3")}, self.gd), ({BS: 40}, {BS: 3}))
+
+    def test_resolve_unknown_recipe_raises(self):
+        from yap_forever.planner import resolve_goals
+        with self.assertRaisesRegex(ValueError, "no Blacksmithing recipe called 'Iron Nothing'"):
+            resolve_goals({BS: self.Goal(recipe="Iron Nothing")}, self.gd)
+
+    def test_resolve_unlearnable_recipe_raises(self):
+        from yap_forever.planner import resolve_goals
+        with self.assertRaisesRegex(ValueError, "can't plan BS Mystery yet"):
+            resolve_goals({BS: self.Goal(recipe="BS Mystery")}, self.gd)
+
+    def test_resolve_favor_recipe(self):
+        from yap_forever.planner import resolve_goals
+        favor = FavorData({4: 30}, {}, [])
+        self.assertEqual(resolve_goals({BS: self.Goal(recipe="BS Mystery")}, self.gd, favor=favor),
+                         ({BS: 50}, {BS: 4}))

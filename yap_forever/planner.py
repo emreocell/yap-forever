@@ -65,6 +65,29 @@ class Plan:
     leftover_value: float = 0
 
 
+def resolve_goals(goals: dict, gd, favor=None, quests: dict | None = None) -> tuple[dict[int, int], dict[int, int]]:
+    """Goals (config.Goal per profession) -> (target skill per profession, recipe to craft once)."""
+    caps: dict[int, int] = {}
+    once: dict[int, int] = {}
+    favor_spells = set(favor.recipes) if favor else set()
+    quests = quests or {}
+    for prof, goal in goals.items():
+        if goal.recipe is None:
+            caps[prof] = goal.skill
+            continue
+        name = PROFESSIONS.get(prof, str(prof))
+        text = goal.recipe.strip()
+        mine = [r for r in gd.recipes.values() if r.skill_line == prof]
+        r = next((r for r in mine if (text.isdigit() and r.spell_id == int(text))
+                  or r.name.casefold() == text.casefold()), None)
+        if r is None:
+            raise ValueError(f"no {name} recipe called {text!r}")
+        if r.source == "unknown" and r.spell_id not in favor_spells and r.spell_id not in quests:
+            raise ValueError(f"can't plan {r.name} yet: the game data doesn't say how to learn it")
+        caps[prof], once[prof] = r.required_skill, r.spell_id
+    return caps, once
+
+
 def apply_favor(recipes: dict, favor) -> dict:
     """Recipes listed in favor.toml are learned with Favor.
 
@@ -81,20 +104,30 @@ def apply_favor(recipes: dict, favor) -> dict:
 
 
 def plan(gd, valuer, stock, favor, cap: int = 225, quests: dict | None = None,
-         reuse: dict[int, tuple[float, float]] | None = None) -> Plan:
-    """reuse: item -> (count later steps consume, value per unit), credited when a step makes it."""
+         reuse: dict[int, tuple[float, float]] | None = None, caps: dict[int, int] | None = None,
+         craft_once: dict[int, int] | None = None, exclude: frozenset[int] = frozenset()) -> Plan:
+    """caps: profession -> target skill (default Blacksmithing and Enchanting to `cap`).
+    craft_once: profession -> recipe crafted once on reaching its cap. exclude: recipes not to use.
+    reuse: item -> (count later steps consume, value per unit), credited when a step makes it."""
     quests = quests or {}
     reuse = reuse or {}
+    caps = dict(caps) if caps else {BS: cap, ENCH: cap}
+    craft_once = craft_once or {}
+    profs = tuple(caps)
+    has_ench = ENCH in caps
+    ench_cap = caps.get(ENCH, 0)
     recipes = apply_favor(gd.recipes, favor)
     for spell in quests:
         if spell in recipes:
             recipes[spell] = dataclasses.replace(recipes[spell], source="quest")
+    for spell in exclude:
+        recipes.pop(spell, None)
     pools = Pools.from_stock(stock)
     p = Plan()
-    skill = {x: max(1, stock.skills.get(x, 1)) for x in (BS, ENCH)}
+    skill = {x: max(1, stock.skills.get(x, 1)) for x in profs}
     # Ranks up to the current skill are already trained; at exactly a cap the next one is not.
     rank_cap = {x: min([c for c in [START_CAP] + [r.cap for r in gd.trainer_ranks.get(x, [])]
-                        if c >= skill[x]], default=START_CAP) for x in (BS, ENCH)}
+                        if c >= skill[x]], default=START_CAP) for x in profs}
     learned: set[int] = set()
     produced: dict[int, float] = {}
     held: dict[int, float] = {}
@@ -103,7 +136,7 @@ def plan(gd, valuer, stock, favor, cap: int = 225, quests: dict | None = None,
     spent = Cost()
     favor_left = stock.favor
     de_credit = 0.0  # disenchants done that have not yet added up to a skill-up
-    ench_reagents = {i for r in recipes.values() if r.skill_line == ENCH for i in r.reagents}
+    ench_reagents = {i for r in recipes.values() if r.skill_line == ENCH for i in r.reagents} if has_ench else set()
 
     def tool_held(cat):
         have = set(pools.tools) | {i for i, n in pools.made.items() if n >= 1} | \
@@ -147,7 +180,7 @@ def plan(gd, valuer, stock, favor, cap: int = 225, quests: dict | None = None,
         if ah and ah[0] == "ah":
             opts.append({"how": "ah", "item": item, "cost": Cost(ah[1], ah[1]), "requests": [], "recipe": None})
         for r in recipes.values():
-            if not r.output or r.output[0] != item or skill[r.skill_line] < r.required_skill:
+            if not r.output or r.output[0] != item or skill.get(r.skill_line, 0) < r.required_skill:
                 continue
             if any(not tool_held(c) for c in r.tools):
                 continue
@@ -165,6 +198,8 @@ def plan(gd, valuer, stock, favor, cap: int = 225, quests: dict | None = None,
 
     def release_held(where=""):
         released = False
+        if not has_ench:
+            return released
         for item in list(held):
             gate = de_skill_needed(gd.items[item].item_level)
             if skill[ENCH] >= gate:
@@ -180,10 +215,10 @@ def plan(gd, valuer, stock, favor, cap: int = 225, quests: dict | None = None,
     def disenchant_bank():
         """Greens in the bank are disenchanted first, all at once: a green you can disenchant is not a
         lost sale, and each one is a chance at an Enchanting skill-up below 60."""
-        if skill[ENCH] >= cap:
+        if not has_ench or skill[ENCH] >= ench_cap:
             return
         greens = {i: n for i, n in pools.stock.items() if n >= 1 and (info := gd.items.get(i))
-                  and de_yield(info) and de_skill_needed(info.item_level) <= cap}
+                  and de_yield(info) and de_skill_needed(info.item_level) <= ench_cap}
         if not greens:
             return
         for i, n in greens.items():
@@ -199,7 +234,7 @@ def plan(gd, valuer, stock, favor, cap: int = 225, quests: dict | None = None,
         """Disenchanting n items gives Enchanting skill-ups at the expected rate."""
         nonlocal de_credit
         de_credit += n
-        while skill[ENCH] < min(cap, rank_cap[ENCH]):
+        while skill[ENCH] < min(ench_cap, rank_cap[ENCH]):
             s = skill[ENCH]
             chance = skillup_chance(s, DE_THRESHOLDS)
             if chance <= 0:
@@ -217,13 +252,15 @@ def plan(gd, valuer, stock, favor, cap: int = 225, quests: dict | None = None,
             skill[ENCH] = s + 1
 
     def should_hold(item, opts):
+        if not has_ench:
+            return False
         if max(opts, key=opts.get) == "de":
             return True
         info = gd.items.get(item)
-        if not info or de_skill_needed(info.item_level) > cap:
+        if not info or de_skill_needed(info.item_level) > ench_cap:
             return False
         # While disenchanting still gives Enchanting skill, that beats selling the green.
-        if de_yield(info) and de_skill_needed(info.item_level) <= skill[ENCH] < min(cap, DE_THRESHOLDS[3]):
+        if de_yield(info) and de_skill_needed(info.item_level) <= skill[ENCH] < min(ench_cap, DE_THRESHOLDS[3]):
             return True
         # Disenchanting is the only source of an Enchanting reagent missing from the AH.
         return any(m in ench_reagents and valuer.market.depth(m) == 0 for m in de_yield(info))
@@ -250,9 +287,55 @@ def plan(gd, valuer, stock, favor, cap: int = 225, quests: dict | None = None,
         p.events.append(f"{name} {s}: Learn {r.name} ({how}{price})")
         return learn_cost
 
+    for x in profs:
+        if skill[x] >= caps[x]:
+            p.events.append(f"{PROFESSIONS[x]} already at {skill[x]}")
+    def train_in_window(prof, s, name):
+        """A trainer visit to learn a recipe also trains the next rank when the skill is in its window
+        and the target needs that rank."""
+        nonlocal spent
+        nxt = next((r for r in gd.trainer_ranks.get(prof, []) if r.cap > rank_cap[prof]), None)
+        if nxt is None or caps[prof] <= rank_cap[prof] or s < nxt.required_skill or stock.level < nxt.level:
+            return
+        p.fees += nxt.fee
+        spent += Cost(nxt.fee, nxt.fee)
+        rank_cap[prof] = nxt.cap
+        p.events.append(f"{name} {s}: train rank up to {nxt.cap} ({money(nxt.fee)})")
+
+    def craft_once_step(prof, spell):
+        """The goal recipe, learned and crafted once at the end of its profession's route."""
+        nonlocal spent
+        name, s, r = PROFESSIONS[prof], skill[prof], recipes.get(spell)
+        if r is None or s < r.required_skill:
+            p.stall_reasons.setdefault(prof, f"{name}: did not reach {r.name if r else spell}")
+            return
+        lo = learn_option(r)
+        if isinstance(lo, str):
+            p.stall_reasons[prof] = f"{name}: can't learn {r.name}: {lo}"
+            return
+        if any(not tool_held(cat) for cat in r.tools):
+            p.stall_reasons[prof] = f"{name}: {r.name} needs a tool the route doesn't make"
+            return
+        requests = lo[3] + list(r.reagents.items())
+        if valuer.take_many(requests, pools, skill, commit=False, learned=learned) is None:
+            p.stall_reasons[prof] = f"{name}: materials for {r.name} not available"
+            return
+        step_cost = Cost()
+        if spell not in learned:
+            step_cost += learn_now(r, lo, s, name)
+        before = _snapshot(pools)
+        step_cost += valuer.take_many(requests, pools, skill, commit=True, learned=learned)
+        mats, from_stock, used_made = _deltas(before, _snapshot(pools))
+        if r.output:
+            pools.made[r.output[0]] = pools.made.get(r.output[0], 0) + r.output[1]
+        spent += step_cost
+        p.steps.append(Step(prof, s, s, spell, r.name, 1, step_cost.cash, step_cost.economic,
+                            mats, from_stock, used_made, 1))
+        p.events.append(f"{name} {s}: craft {r.name} once")
+
     disenchant_bank()
     while True:
-        active = [x for x in (BS, ENCH) if x not in p.stalled and skill[x] < cap]
+        active = [x for x in profs if x not in p.stalled and skill[x] < caps[x]]
         if not active:
             break
         prof = min(active, key=lambda x: (skill[x], x))
@@ -281,7 +364,7 @@ def plan(gd, valuer, stock, favor, cap: int = 225, quests: dict | None = None,
             if chance <= 0:
                 continue
             crafts = 1 / chance
-            usable = max(1, min(r.thresholds[3], cap) - s)
+            usable = max(1, min(r.thresholds[3], caps[prof]) - s)
             lo = learn_option(r)
             if isinstance(lo, str):
                 skipped[r.spell_id] = lo
@@ -316,7 +399,7 @@ def plan(gd, valuer, stock, favor, cap: int = 225, quests: dict | None = None,
             # counted in the totals but must not pull in extra, lower-chance crafts.
             out_val = 0
             if r.output:
-                de = valuer.output_options(r.output[0], produced.get(r.output[0], 0)).get("de", 0)
+                de = valuer.output_options(r.output[0], produced.get(r.output[0], 0)).get("de", 0) if has_ench else 0
                 out_val = de * r.output[1] * crafts
                 # A reagent later steps consume is worth what it would cost, up to the count they need.
                 if r.output[0] in reuse:
@@ -336,6 +419,8 @@ def plan(gd, valuer, stock, favor, cap: int = 225, quests: dict | None = None,
 
         _key, r, crafts, lo, tools, requests = best
         step_cost = Cost()
+        if r.spell_id not in learned and r.source == "trainer":
+            train_in_window(prof, s, name)
         if r.spell_id not in learned:
             requests = lo[3] + requests  # quest hand-ins, taken with the crafts
             step_cost += learn_now(r, lo, s, name)
@@ -387,11 +472,14 @@ def plan(gd, valuer, stock, favor, cap: int = 225, quests: dict | None = None,
                                 mats, from_stock, used_made, crafts * buffer_factor(crafts)))
         skill[prof] = s + 1
         made_something = release_held() or made_something
-        other = ENCH if prof == BS else BS
-        if made_something and other in soft_stalls:
-            soft_stalls.discard(other)
-            p.stalled.pop(other, None)
-            p.stall_reasons.pop(other, None)
+        for other in profs:
+            if made_something and other != prof and other in soft_stalls:
+                soft_stalls.discard(other)
+                p.stalled.pop(other, None)
+                p.stall_reasons.pop(other, None)
+
+    for prof, spell in craft_once.items():
+        craft_once_step(prof, spell)
 
     # --- wrap up -------------------------------------------------------------
     p.final_skill = dict(skill)

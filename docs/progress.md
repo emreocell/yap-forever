@@ -35,3 +35,4 @@ One line per finished task. Plans are private to the owner; tasks are named by p
 | 2026-11-18 | 1.29 | Report's "Order A" text matches the planner since #22 and #24 (outside contribution) | #47 |
 | 2026-11-18 | 2.1 | Game data loads the recipes and starter recipes of the professions asked for (any of the six crafts), and each item's stack size; profession names cover all six | #51 |
 | 2026-11-18 | 2.2 | Per-profession goals: `[goals]` in `stock.toml` (a skill 1-300, or a recipe by name or spell ID), `bag_slots`; `migrate` adds Blacksmithing and Enchanting goals to older stock files | #52 |
+| 2026-11-18 | 2.3 | Planner for any professions, each to its own target (`caps`), with a recipe to craft once at the end; disenchanting only when Enchanting is planned; `exclude`; a rank is trained on the trainer visit that learns a recipe inside its window (50-75, 125-150, ...) when the target needs it; `resolve_goals` turns goals into targets | #53 |
