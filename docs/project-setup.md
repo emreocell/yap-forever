@@ -6,7 +6,7 @@
 | Requirements document (BT) | The owner's private design spec `public-skill-design.md` and plan `yap-forever-phase1-plan.md` (2026-11-18), kept outside this public repo; only the file names are recorded here | asked | a phase gets its own plan or the spec is revised |
 | Remote and CI | GitHub `sableon/yap-forever` (public, `origin`). GitHub Actions runs the tests on Windows, macOS and Linux with Python 3.11 and 3.13 (since PR #8) | asked | |
 | Branch rules | Work on a task branch and reach `main` only by pull request; no direct commits or pushes to `main`. Once CI exists, merge only with CI green | asked; "CI green" derived from the spec | |
-| Who merges | An agent may merge every pull request within a plan section the owner approved | asked | |
+| Who merges | An agent may merge every pull request within a plan section the owner approved; outside contributors' pull requests only with the owner's OK | asked | |
 | Stack | Inherited from the owner's personal planner: Python 3.11+ standard library only, `unittest` | derived | |
 | Scale and deployment | Each player's own machine (Windows, macOS, Linux), installed as a Claude Code plugin; no server | derived | a hosted service is planned |
 | Production authentication | None of ours: each player's own Blizzard API key in `~/.yap-forever/credentials.json` (mode 600), never read into a conversation | derived | a hosted service is planned |
