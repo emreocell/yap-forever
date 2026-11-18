@@ -379,6 +379,8 @@ def plan(gd, valuer, stock, favor, cap: int = 225, quests: dict | None = None,
         if n < 1e-9:
             continue
         p.leftovers[item] = p.leftovers.get(item, 0) + n
+        if item in held:
+            continue  # kept for disenchanting, not sold
         if item in de_mats:
             p.leftover_value += n * valuer.owned_value(item)
         else:
@@ -409,11 +411,13 @@ def _deltas(before: dict, after: dict):
 
 
 def sale_value(valuer, gd, item: int, n: float) -> float:
-    """Selling n crafted items: AH for the first few (all if a quest item), vendor after."""
+    """Selling n crafted items: AH for the first few (all if a quest item), vendor after.
+
+    The AH part is also capped at what is listed today: more than that would not sell at that price."""
     info = gd.items.get(item)
     vendor = info.sell_price if info else 0
     ah = valuer.market.net_sell(item) or 0
     if ah <= vendor:
         return n * vendor
-    cap = min(n, valuer.sale_limit(item))
+    cap = min(n, valuer.sale_limit(item), valuer.market.depth(item))
     return cap * ah + (n - cap) * vendor

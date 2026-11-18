@@ -125,10 +125,10 @@ class StoneTests(unittest.TestCase):
 
 
 class QuestSalesLimitTests(unittest.TestCase):
-    def valuer(self, limit):
+    def valuer(self, limit, depth=3):
         gd = toy.gamedata([], quest_items=[toy.VEST])
         st = dataclasses.replace(toy.stock(), quest_item_sales=limit)
-        return Valuer(toy.market({toy.VEST: [(500, 3)]}), gd, st)
+        return Valuer(toy.market({toy.VEST: [(500, depth)]}), gd, st)
 
     def test_quest_item_limit(self):
         v = self.valuer(10)
@@ -140,9 +140,15 @@ class QuestSalesLimitTests(unittest.TestCase):
 
     def test_sale_value_uses_limit(self):
         from yap_forever.planner import sale_value
-        v = self.valuer(10)
+        v = self.valuer(10, depth=30)
         # 10 on the AH at 475 net, 10 to a vendor at 20
         self.assertEqual(sale_value(v, v.gd, toy.VEST, 20), 10 * 475 + 10 * 20)
+
+    def test_sale_value_capped_by_listings(self):
+        from yap_forever.planner import sale_value
+        v = self.valuer(None, depth=3)
+        # no quest limit, but only 3 listed: 3 on the AH, 17 to a vendor
+        self.assertEqual(sale_value(v, v.gd, toy.VEST, 20), 3 * 475 + 17 * 20)
 
 
 class SmeltFromStockTests(unittest.TestCase):
