@@ -13,3 +13,4 @@ One line per finished task. Plans are private to the owner; tasks are named by p
 | 2026-11-18 | 1.7 | Plugin manifests, `forever-professions` skill with setup, list-layout and game-rules references, CREDITS, README; checks for manifests, skill links, credits and private details. Headless session with `--plugin-dir` loaded the skill and ran `check --offline` from the plugin root | #7 |
 | 2026-11-18 | 1.8 | CI on Windows, macOS and Linux with Python 3.11 and 3.13; POSIX-mode tests skip on Windows; `__main__` safe on old Pythons (3.9 gets the version message); `llms.txt` and `HANDOFF.md` | #8 |
 | 2026-11-18 | 1.9 | Final review fixes: network failures give a next step instead of a traceback; output escapes characters a Windows console code page cannot show; neutral house numbers in tests and a pattern-capable private denylist | #9 |
+| 2026-11-18 | 1.10 | Two-word Forever character names: quoted TOML keys in `migrate`, the profile template and the setup guide | #10 |

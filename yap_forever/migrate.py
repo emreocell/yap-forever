@@ -40,7 +40,9 @@ def migrate(user_dir: Path, data_dir: Path, dest: Paths, main: str,
     if dest.profile.exists():
         actions.append(f"kept {dest.profile}")
     else:
-        chars = "".join(f'\n[characters.{n}]\nfavor_standing = "Neutral"\n' for n in [main, *alts])
+        # Quoted keys: character names may have spaces or accents, which bare TOML keys can't.
+        chars = "".join(f'\n[characters.{json.dumps(n, ensure_ascii=False)}]\nfavor_standing = "Neutral"\n'
+                        for n in [main, *alts])
         dest.profile.parent.mkdir(parents=True, exist_ok=True)
         dest.profile.write_text('region = "eu"\nruleset = 2\nfaction = "alliance"\n' + chars, encoding="utf-8")
         actions.append(f"wrote {dest.profile}")

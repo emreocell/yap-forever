@@ -16,7 +16,8 @@ player what changed, running the planner, and walking them through the result.
 - Find the Python command once per session: on Windows try `py -3`, otherwise `python3`, then
   `python`; keep the first whose `--version` says 3.11 or newer. Below it is written `<python>`.
 - Run `<python> -m yap_forever <command>`. Commands: `init`, `check [--offline]`,
-  `probe --item ID --buyout COPPER`, `prices`, `plan --character NAME`.
+  `probe --item ID --buyout COPPER`, `prices`, `plan --character "FIRST LAST"` (Forever character
+  names are two words; quote them).
 - The player's files are in `~/.yap-forever/` (or `$YAP_FOREVER_HOME`).
 - **Never open, print or ask for `credentials.json`.** The player pastes their API client ID and
   secret into it themselves. If they paste them into the chat, tell them to create a new secret
