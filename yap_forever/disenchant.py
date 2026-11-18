@@ -1,4 +1,4 @@
-"""Expected disenchant results for uncommon armor and weapons (Classic rules)."""
+"""Disenchanting uncommon armor and weapons: Forever gates and skill-ups, Classic material odds."""
 import tomllib
 
 from yap_forever.config import STATIC_DIR
@@ -8,7 +8,9 @@ UNCOMMON = 2
 NOT_DISENCHANTABLE = 999
 
 with open(STATIC_DIR / "disenchant.toml", "rb") as _f:
-    BANDS = tomllib.load(_f)["band"]
+    _DATA = tomllib.load(_f)
+BANDS = _DATA["band"]
+DE_THRESHOLDS: tuple[int, int, int, int] = tuple(_DATA["skill_ups"])
 
 
 def _band(item_level: int):

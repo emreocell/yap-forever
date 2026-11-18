@@ -81,14 +81,36 @@ class PlannerTests(unittest.TestCase):
         self.assertEqual(p.stalled, {BS: 60})
         self.assertEqual(p.final_skill[ENCH], 225)
 
-    def test_held_greens_released_at_gate(self):
+    def test_greens_disenchanted_as_made(self):
         rs = [toy.recipe(1, "Belt", BS, {toy.COPPER_BAR: 1}, (toy.BELT, 1)),
               toy.recipe(2, "Ench dust", ENCH, {toy.DUST: 1})]
         p = run(rs, {**BARS, toy.DUST: [(300, 100000)]}, cap=40)
-        # belts (ilvl 22, gate 25) are disenchanted once Enchanting reaches 25
+        # Forever has no item-level gate: belts (ilvl 22) are disenchanted from Enchanting 1
         self.assertEqual(p.held_for_de, {})
-        self.assertTrue(any(e.startswith("Enchanting 25: disenchant") for e in p.events))
+        self.assertTrue(any(e.startswith("Enchanting 1: disenchant") for e in p.events))
         self.assertGreater(p.de_materials.get(toy.DUST, 0), 0)
+
+    def test_disenchants_raise_enchanting(self):
+        rs = [toy.recipe(1, "Belt", BS, {toy.COPPER_BAR: 1}, (toy.BELT, 1)),
+              toy.recipe(2, "Ench dust", ENCH, {toy.DUST: 1})]
+        p = run(rs, {**BARS, toy.DUST: [(300, 100000)]}, cap=40)
+        de_steps = [s for s in p.steps if s.profession == ENCH and s.spell_id == 0]
+        self.assertTrue(de_steps)
+        self.assertEqual(de_steps[0].skill_from, 1)
+        self.assertEqual(sum(s.cash + s.economic for s in de_steps), 0)
+        # Enchanting steps, recipes and disenchants together, cover every point without gaps.
+        ench = sorted((s.skill_from, s.skill_to) for s in p.steps if s.profession == ENCH)
+        self.assertEqual(ench[0][0], 1)
+        for (_, a), (b, _) in zip(ench, ench[1:]):
+            self.assertEqual(a, b)
+        self.assertEqual(ench[-1][1], p.final_skill[ENCH])
+
+    def test_disenchant_skillups_stop_at_60(self):
+        rs = [toy.recipe(1, "Belts", BS, {toy.COPPER_BAR: 1}, (toy.BELT, 5))]
+        p = run(rs, BARS, cap=75)
+        self.assertEqual(p.final_skill[ENCH], 60)
+        crafts = sum(s.crafts for s in p.steps if s.profession == ENCH and s.spell_id == 0)
+        self.assertAlmostEqual(crafts, 190.1, delta=0.5)
 
     def test_favor_limit_respected(self):
         rs = base_recipes() + [
