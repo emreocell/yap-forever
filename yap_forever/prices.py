@@ -3,12 +3,10 @@
 Usage: python3 prices.py
 """
 import json
-import sys
 from pathlib import Path
 
 from yap_forever import bnet
 from yap_forever import settings
-from yap_forever.settings import load_credentials
 
 AH_CUT = 0.05
 
@@ -70,23 +68,15 @@ class Market:
                    d.get("snapshot_time", ""))
 
 
-def main() -> int:
-    p = settings.paths()
-    house_file = p.house
-    if not house_file.exists():
-        print("No house yet: run probe.py with a marker listing first.")
-        return 1
-    house = json.loads(house_file.read_text(encoding="utf-8"))["house"]
-    since = None
-    if p.prices.exists():
-        since = Market.load().snapshot_time or None
+def fetch(client, house: int, ruleset: int, prices_path: Path, log_path: Path) -> int:
+    """Download the house's snapshot unless it is unchanged. Returns an exit code."""
+    since = Market.load(prices_path).snapshot_time or None if prices_path.exists() else None
     try:
-        client = bnet.Client(load_credentials())
-        r = client.get(bnet.house_path(house), if_modified_since=since)
+        r = client.get(bnet.house_path(house, ruleset), if_modified_since=since)
         if r.status == 304:
             print(f"No new snapshot since {since}.")
             return 0
-        comm = client.get(bnet.house_path(house, commodities=True)).body or {}
+        comm = client.get(bnet.house_path(house, ruleset, commodities=True)).body or {}
     except bnet.AuthError:
         print(bnet.AUTH_MESSAGE)
         return 2
@@ -94,12 +84,10 @@ def main() -> int:
         print(e if e.status == 0 else f"{e} — the Forever API route may have changed.")
         return 1
     m = Market.from_snapshot(r.body or {}, comm, r.last_modified or "")
-    m.save()
-    with open(p.cache / "snapshots.log", "a", encoding="utf-8") as f:
+    m.save(prices_path)
+    with open(log_path, "a", encoding="utf-8") as f:
         f.write(f"{r.last_modified}\n")
     print(f"Saved {len(m.listings)} items from house {house}, snapshot {r.last_modified}.")
     return 0
 
 
-if __name__ == "__main__":
-    sys.exit(main())
