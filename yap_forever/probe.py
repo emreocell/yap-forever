@@ -1,65 +1,40 @@
-"""Check API access and find which Alliance house is ours via a marker listing.
+"""Find which auction house is the player's, from one marker listing they posted in game.
 
-Usage: python3 probe.py [--token-only]
+The API does not label houses by realm or faction, and listings carry no seller name, so the
+player lists one item at an odd, unique buyout and the probe looks for it in every house of
+the ruleset's index.
 """
-import json
-import sys
-from datetime import datetime, timezone
+from pathlib import Path
 
-from yap_forever import bnet
-from yap_forever import settings
-from yap_forever.config import load_stock
-from yap_forever.settings import load_credentials
+from yap_forever import bnet, profile
 
 
-def main(argv: list[str]) -> int:
+def find_marker_houses(client, ruleset: int, item_id: int, buyout: int) -> list[int]:
+    idx = client.get(bnet.index_path(ruleset)).body or {}
+    houses = {}
+    for h in bnet.index_houses(idx):
+        regular = client.get(bnet.house_path(h, ruleset)).body or {}
+        comm = client.get(bnet.house_path(h, ruleset, commodities=True)).body or {}
+        houses[h] = (regular, comm)
+        print(f"house {h}: {len(regular.get('auctions', []))} listings, "
+              f"{len(comm.get('auctions', []))} commodity listings")
+    return bnet.find_marker(houses, item_id, buyout)
+
+
+def run(client, region: str, ruleset: int, item_id: int, buyout: int, house_file: Path) -> int:
+    """Save the one house holding the marker; leave house_file alone otherwise. Returns an exit code."""
     try:
-        client = bnet.Client(load_credentials())
-        client.token()
-    except (PermissionError, ValueError) as e:
-        print(e)
-        return 2
-    except bnet.AuthError:
-        print(bnet.AUTH_MESSAGE)
-        return 2
-    print("token OK")
-    if "--token-only" in argv:
-        return 0
-
-    try:
-        idx = client.get(f"/data/wow/ruleset/{bnet.RULESET}/auctions/index").body or {}
-        print("houses in index:", ", ".join(str(h.get("id")) for h in idx.get("auctions", [])))
-        stock = load_stock(settings.paths().root / "stock.toml")
-        if not stock.marker:
-            print("Set [marker] item_id and buyout_copper in stock.toml first.")
-            return 1
-        houses = {}
-        for h in bnet.HOUSES:
-            regular = client.get(bnet.house_path(h)).body or {}
-            comm = client.get(bnet.house_path(h, commodities=True)).body or {}
-            houses[h] = (regular, comm)
-            print(f"house {h}: {len(regular.get('auctions', []))} listings, "
-                  f"{len(comm.get('auctions', []))} commodity listings")
+        matches = find_marker_houses(client, ruleset, item_id, buyout)
     except bnet.AuthError:
         print(bnet.AUTH_MESSAGE)
         return 2
     except bnet.ApiError as e:
         print(e if e.status == 0 else f"{e} — the Forever API route may have changed.")
         return 1
-
-    matches = bnet.find_marker(houses, *stock.marker)
     if len(matches) != 1:
         print(f"marker found in {len(matches)} houses ({matches}); the snapshot may not include it yet. "
-              "Try again later or pick a more unusual buyout.")
+              "Try again in an hour, or pick a more unusual buyout.")
         return 1
-    house_file = settings.paths().house
-    house_file.parent.mkdir(parents=True, exist_ok=True)
-    house_file.write_text(json.dumps(
-        {"house": matches[0], "found": datetime.now(timezone.utc).isoformat(timespec="seconds")}),
-        encoding="utf-8")
+    profile.save_house(house_file, matches[0], region, ruleset)
     print(f"Your auction house is {matches[0]} (saved to {house_file}).")
     return 0
-
-
-if __name__ == "__main__":
-    sys.exit(main(sys.argv[1:]))

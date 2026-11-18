@@ -17,9 +17,6 @@ from yap_forever import settings
 from yap_forever.config import Credentials
 
 TOKEN_URL = "https://oauth.battle.net/token"
-NAMESPACE = "dynamic-forever-eu"
-RULESET = 2  # Normal
-HOUSES = (110, 111, 119, 123)  # Alliance auction houses
 AUTH_MESSAGE = "Battle.net rejected the client ID/secret — check the client at develop.battle.net"
 
 
@@ -45,12 +42,14 @@ class Response:
 
 class Client:
     def __init__(self, creds: Credentials, opener=urllib.request.urlopen, now=time.time,
-                 token_cache: Path | None = None):
+                 token_cache: Path | None = None, region: str | None = None):
         self.creds = creds
         self.opener = opener
         self.now = now
         self.token_cache = Path(token_cache) if token_cache is not None else settings.paths().token
-        self.host = f"https://{creds.region}.api.blizzard.com"
+        self.region = region or creds.region
+        self.host = f"https://{self.region}.api.blizzard.com"
+        self.namespace = namespace(self.region)
 
     # --- token -------------------------------------------------------------
     def _cached_token(self) -> str | None:
@@ -98,7 +97,7 @@ class Client:
 
     def _get(self, path: str, if_modified_since: str | None = None) -> Response:
         headers = {"Authorization": f"Bearer {self.token()}",
-                   "Battlenet-Namespace": NAMESPACE,
+                   "Battlenet-Namespace": self.namespace,
                    "Accept-Encoding": "gzip"}
         if if_modified_since:
             headers["If-Modified-Since"] = if_modified_since
@@ -121,8 +120,20 @@ class Client:
         return Response(200, json.loads(raw) if raw else None, hdrs.get("Last-Modified"))
 
 
-def house_path(house: int, commodities: bool = False) -> str:
-    p = f"/data/wow/ruleset/{RULESET}/auctions/{house}"
+def namespace(region: str) -> str:
+    return f"dynamic-forever-{region}"
+
+
+def index_path(ruleset: int) -> str:
+    return f"/data/wow/ruleset/{ruleset}/auctions/index"
+
+
+def index_houses(index: dict) -> list[int]:
+    return sorted(int(h["id"]) for h in (index or {}).get("auctions", []) if "id" in h)
+
+
+def house_path(house: int, ruleset: int, commodities: bool = False) -> str:
+    p = f"/data/wow/ruleset/{ruleset}/auctions/{house}"
     return p + "/commodities" if commodities else p
 
 
